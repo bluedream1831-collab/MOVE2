@@ -3,125 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>行動盤點與裝車系統</title>
+    <title>倉庫出貨全品項檢核系統</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --gray: #6c757d; }
-        body { font-family: -apple-system, sans-serif; background: #f0f2f5; margin: 0; padding-bottom: 80px; }
+        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --warning: #fd7e14; --gray: #6c757d; }
+        body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; background: #f4f6f9; margin: 0; padding-bottom: 90px; }
         
-        /* 頂部固定區 */
-        .header { background: white; padding: 15px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .search-bar { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 25px; box-sizing: border-box; font-size: 16px; margin-top: 10px; }
+        .header { background: #343a40; color: white; padding: 15px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .search-bar { width: 100%; padding: 12px; border: none; border-radius: 5px; box-sizing: border-box; font-size: 16px; margin-top: 10px; background: rgba(255,255,255,0.9); }
         
-        /* 卡片清單 */
         .list-container { padding: 10px; }
-        .item-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; border-left: 6px solid var(--gray); transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .item-card.completed { border-left-color: var(--success); background: #f8fff9; }
-        .item-card.abnormal { border-left-color: var(--danger); background: #fff8f8; }
+        .item-card { background: white; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 5px solid var(--success); position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .item-card.changed { border-left-color: var(--warning); }
+        .item-card.abnormal { border-left-color: var(--danger); background: #fff5f5; }
 
-        .item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-        .item-loc { background: #333; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-        .item-name { font-weight: bold; font-size: 16px; flex: 1; margin: 0 10px; color: #333; }
+        .item-row-1 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .loc-tag { background: #e9ecef; color: #333; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-family: monospace; }
+        .item-name { font-weight: bold; font-size: 15px; color: #333; flex: 1; margin: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
         
-        .item-info { font-size: 13px; color: #666; margin-bottom: 10px; }
-
-        /* 數量控制器 */
-        .qty-controls { display: flex; align-items: center; justify-content: space-between; background: #f8f9fa; padding: 10px; border-radius: 8px; }
-        .qty-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: white; font-size: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; }
-        .qty-val { font-size: 20px; font-weight: bold; color: var(--primary); }
+        .item-details { font-size: 12px; color: #777; margin-bottom: 8px; }
         
-        /* 下方操作列 */
-        .footer-tools { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 10px; display: flex; gap: 10px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
-        .btn { flex: 1; padding: 12px; border-radius: 8px; border: none; font-weight: bold; color: white; font-size: 14px; }
-        .btn-excel { background: var(--success); }
+        .qty-area { display: flex; align-items: center; justify-content: space-between; background: #f8f9fa; padding: 8px; border-radius: 6px; }
+        .qty-btn { width: 45px; height: 35px; border-radius: 4px; border: 1px solid #ddd; background: white; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .qty-display { text-align: center; flex: 1; }
+        .qty-val { font-size: 20px; font-weight: bold; color: var(--success); }
+        .qty-val.diff { color: var(--warning); }
+        
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 12px; display: flex; gap: 10px; box-shadow: 0 -3px 10px rgba(0,0,0,0.1); }
+        .btn { flex: 1; padding: 14px; border-radius: 6px; border: none; font-weight: bold; color: white; font-size: 15px; }
         .btn-assign { background: var(--primary); }
+        .btn-excel { background: var(--success); }
 
-        /* 彈窗 */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-content { background: white; padding: 20px; border-radius: 12px; width: 80%; }
-        .input-field { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 400px; }
+        .input-box { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        
+        .badge-car { font-size: 11px; background: #007bff; color: white; padding: 2px 6px; border-radius: 10px; margin-left: 5px; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: bold; font-size: 18px;">📦 倉庫出貨助手</span>
-        <span id="globalDate" style="font-size: 14px; color: #666;"></span>
+    <div style="display:flex; justify-content: space-between;">
+        <strong>📦 全品項清點 (預設整板)</strong>
+        <small id="curDate"></small>
     </div>
-    <input type="text" id="search" class="search-bar" placeholder="搜尋儲位、品名..." onkeyup="render()">
+    <input type="text" id="search" class="search-bar" placeholder="🔍 輸入儲位(如 3B) 或品名關鍵字..." onkeyup="render()">
 </div>
 
-<div class="list-container" id="itemList">
-    <!-- 卡片會動態生成於此 -->
+<div id="itemList" class="list-container"></div>
+
+<div class="footer">
+    <button class="btn btn-assign" onclick="openModal()">🚛 指派車牌/車次</button>
+    <button class="btn btn-excel" onclick="exportExcel()">📊 匯出報表</button>
 </div>
 
-<div class="footer-tools">
-    <button class="btn btn-assign" onclick="openAssignModal()">🚛 指定車牌</button>
-    <button class="btn btn-excel" onclick="exportExcel()">📊 匯出 Excel</button>
-</div>
-
-<!-- 指定車牌彈窗 -->
-<div id="assignModal" class="modal">
+<!-- 彈窗 -->
+<div id="modal" class="modal">
     <div class="modal-content">
-        <h3>批次指定車牌</h3>
-        <p style="font-size: 14px; color: #666;">輸入車牌後，將套用到所有已清點的品項</p>
-        <input type="text" id="modalCarNum" class="input-field" placeholder="輸入車牌 (如: ABC-1234)">
-        <input type="number" id="modalCarSeq" class="input-field" placeholder="車次 (第幾台)">
-        <div style="display: flex; gap: 10px; margin-top: 15px;">
-            <button class="btn" style="background: #ccc;" onclick="closeModal()">取消</button>
-            <button class="btn btn-assign" onclick="applyAssign()">確定套用</button>
+        <h3 style="margin-top:0">指派物流車輛</h3>
+        <label style="font-size:13px">車牌號碼</label>
+        <input type="text" id="carId" class="input-box" placeholder="例如: ABC-1234">
+        <label style="font-size:13px">當日車次</label>
+        <input type="number" id="carSeq" class="input-box" placeholder="例如: 1">
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn" style="background:#666" onclick="closeModal()">取消</button>
+            <button class="btn btn-assign" onclick="saveCarInfo()">確認套用</button>
         </div>
     </div>
 </div>
 
 <script>
-    // 預設資料
-    let products = [
-        { id: 1, loc: "1C2903", name: "冷凍美國CR安格斯牛五花火鍋片袋裝500G", date: "20261222", sysQty: 30, actQty: 0, car: "", seq: "", abnormal: false, note: "" },
-        { id: 2, loc: "3B0301", name: "立大冷凍豬五花火鍋肉片1000G", date: "20270130", sysQty: 50, actQty: 0, car: "", seq: "", abnormal: false, note: "" },
-        { id: 3, loc: "3B3901", name: "泉泓起酥蛋糕(家庭號)", date: "20260901", sysQty: 23, actQty: 0, car: "", seq: "", abnormal: false, note: "" },
-        { id: 4, loc: "4B1802", name: "威保 - 美國冷凍去骨腿排", date: "20270202", sysQty: 42, actQty: 0, car: "", seq: "", abnormal: false, note: "" }
+    // 導入所有 28 個品項資料
+    let db = [
+        {loc:"1C2903", item:"24601003001", name:"冷凍美國CR安格斯牛五花火鍋片袋裝500G", sys:30, date:"20261222"},
+        {loc:"1C2904", item:"24601003001", name:"冷凍美國CR安格斯牛五花火鍋片袋裝500G", sys:30, date:"20261222"},
+        {loc:"1C3001", item:"24601003001", name:"冷凍美國CR安格斯牛五花火鍋片袋裝500G", sys:30, date:"20261222"},
+        {loc:"1C3303", item:"24200002001", name:"威保 - 冷凍紐西蘭 - 全羊火鍋肉片1KG", sys:30, date:"20270202"},
+        {loc:"3B0301", item:"24600105001", name:"立大冷凍豬五花火鍋肉片1000G", sys:50, date:"20270130"},
+        {loc:"3B0501", item:"23904988001", name:"立基 - 冷凍9吋 油酥厚餅", sys:28, date:"20270128"},
+        {loc:"3B0902", item:"23904988001", name:"立基 - 冷凍9吋 油酥厚餅", sys:28, date:"20270302"},
+        {loc:"3B1301", item:"24200074001", name:"舍利蓮冷凍紐西蘭小羔羊梅花肉片500G", sys:49, date:"20270131"},
+        {loc:"3B1401", item:"24600005001", name:"思牧 - 冷凍豬五花火鍋片500G(袋裝)", sys:35, date:"20270210"},
+        {loc:"3B3901", item:"23904009001", name:"泉泓起酥蛋糕(家庭號)", sys:23, date:"20260901"},
+        {loc:"3B3902", item:"23904009001", name:"泉泓起酥蛋糕(家庭號)", sys:24, date:"20260901"},
+        {loc:"3B3903", item:"23904009001", name:"泉泓起酥蛋糕(家庭號)", sys:24, date:"20260901"},
+        {loc:"3B4102", item:"24601107001", name:"美國CR安格斯牛 五花火鍋片1000G", sys:32, date:"20261218"},
+        {loc:"3B4702", item:"23904125001", name:"泉泓冷凍蜂蜜蛋糕", sys:28, date:"20260902"},
+        {loc:"3B4703", item:"23904125001", name:"泉泓冷凍蜂蜜蛋糕", sys:28, date:"20260902"},
+        {loc:"3B4801", item:"23904040001", name:"泉泓起酥蛋糕", sys:28, date:"20260903"},
+        {loc:"3B4802", item:"23904040001", name:"泉泓起酥蛋糕", sys:28, date:"20260903"},
+        {loc:"3B4803", item:"23904040001", name:"泉泓起酥蛋糕", sys:28, date:"20260903"},
+        {loc:"3B4901", item:"23904009001", name:"泉泓起酥蛋糕(家庭號)", sys:24, date:"20260823"},
+        {loc:"3B4903", item:"23904009001", name:"泉泓起酥蛋糕(家庭號)", sys:24, date:"20260823"},
+        {loc:"3F1402", item:"23904009001", name:"泉泓起酥蛋糕(家庭號)", sys:24, date:"20260824"},
+        {loc:"3F1403", item:"23904009001", name:"泉泓起酥蛋糕(家庭號)", sys:24, date:"20260824"},
+        {loc:"4B0701", item:"24601108001", name:"舍利蓮冷凍澳洲穀飼 - 牛雪花肉片500G", sys:49, date:"20270131"},
+        {loc:"4B0702", item:"24601108001", name:"舍利蓮冷凍澳洲穀飼 - 牛雪花肉片500G", sys:49, date:"20270131"},
+        {loc:"4B1102", item:"24200074001", name:"舍利蓮冷凍紐西蘭小羔羊梅花肉片500G", sys:49, date:"20270131"},
+        {loc:"4B1401", item:"24600001001", name:"思牧 - 冷凍豬梅花火鍋片500G(袋裝)", sys:35, date:"20270210"},
+        {loc:"4B1802", item:"24920267001", name:"威保 - 美國冷凍去骨腿排", sys:42, date:"20270202"},
+        {loc:"4B1803", item:"24920267001", name:"威保 - 美國冷凍去骨腿排", sys:42, date:"20270202"}
     ];
 
-    document.getElementById('globalDate').innerText = new Date().toLocaleDateString();
+    // 初始化動態欄位：預設實裝 = 系統數
+    let products = db.map((p, index) => ({
+        ...p, id: index, act: p.sys, car: "", seq: "", abnormal: false, note: ""
+    }));
+
+    document.getElementById('curDate').innerText = new Date().toLocaleDateString();
 
     function render() {
-        const keyword = document.getElementById('search').value.toUpperCase();
+        const key = document.getElementById('search').value.toUpperCase();
         const container = document.getElementById('itemList');
         container.innerHTML = "";
 
-        products.filter(p => p.loc.includes(keyword) || p.name.includes(keyword)).forEach(p => {
-            const isDone = p.actQty > 0;
-            const div = document.createElement('div');
-            div.className = `item-card ${isDone ? 'completed' : ''} ${p.abnormal ? 'abnormal' : ''}`;
-            div.innerHTML = `
-                <div class="item-header">
-                    <span class="item-loc">${p.loc}</span>
+        products.filter(p => p.loc.includes(key) || p.name.includes(key)).forEach(p => {
+            const isDiff = p.act !== p.sys;
+            const card = document.createElement('div');
+            card.className = `item-card ${isDiff ? 'changed' : ''} ${p.abnormal ? 'abnormal' : ''}`;
+            card.innerHTML = `
+                <div class="item-row-1">
+                    <span class="loc-tag">${p.loc}</span>
                     <span class="item-name">${p.name}</span>
-                    <input type="checkbox" ${p.abnormal ? 'checked' : ''} onchange="toggleAbnormal(${p.id})"> <span style="font-size:12px; color:red">異常</span>
+                    <input type="checkbox" ${p.abnormal ? 'checked' : ''} onchange="toggleAbnormal(${p.id})"> <small style="color:red">異常</small>
                 </div>
-                <div class="item-info">
-                    效期: ${p.date} | 系統: <b>${p.sysQty}</b> | 
-                    <span style="color:blue">${p.car ? '🚚 '+p.car : '⏳ 待指定車輛'}</span>
+                <div class="item-details">
+                    效期: ${p.date} | 預設: <b>${p.sys}</b> 
+                    ${p.car ? `<span class="badge-car">🚛 ${p.car} - 第${p.seq}車</span>` : ''}
                 </div>
-                <div class="qty-controls">
-                    <button class="qty-btn" onclick="changeQty(${p.id}, -1)">-</button>
-                    <div style="text-align:center">
-                        <div class="qty-val">${p.actQty}</div>
-                        <div style="font-size:10px; color:#999">實裝數量</div>
+                <div class="qty-area">
+                    <button class="qty-btn" onclick="updateQty(${p.id}, -1)">-</button>
+                    <div class="qty-display">
+                        <div class="qty-val ${isDiff ? 'diff' : ''}">${p.act}</div>
+                        <div style="font-size:10px; color:#999">實裝箱數</div>
                     </div>
-                    <button class="qty-btn" onclick="changeQty(${p.id}, 1)">+</button>
+                    <button class="qty-btn" onclick="updateQty(${p.id}, 1)">+</button>
                 </div>
-                <input type="text" class="input-field" style="margin-top:10px; padding:5px; font-size:12px;" placeholder="異常原因或備註..." value="${p.note}" onchange="updateNote(${p.id}, this.value)">
+                <input type="text" class="input-box" style="margin-top:8px; padding:6px; font-size:12px; height:auto;" placeholder="異常說明/備註" value="${p.note}" onchange="updateNote(${p.id}, this.value)">
             `;
-            container.appendChild(div);
+            container.appendChild(card);
         });
     }
 
-    function changeQty(id, delta) {
+    function updateQty(id, delta) {
         const p = products.find(i => i.id === id);
-        p.actQty = Math.max(0, p.actQty + delta);
+        p.act = Math.max(0, p.act + delta);
         render();
     }
 
@@ -135,37 +162,42 @@
         products.find(i => i.id === id).note = val;
     }
 
-    // 彈窗功能
-    function openAssignModal() { document.getElementById('assignModal').style.display = 'flex'; }
-    function closeModal() { document.getElementById('assignModal').style.display = 'none'; }
-    
-    function applyAssign() {
-        const car = document.getElementById('modalCarNum').value;
-        const seq = document.getElementById('modalCarSeq').value;
-        if(!car) { alert("請輸入車牌"); return; }
+    function openModal() { document.getElementById('modal').style.display = 'flex'; }
+    function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+    function saveCarInfo() {
+        const car = document.getElementById('carId').value;
+        const seq = document.getElementById('carSeq').value;
+        if (!car) { alert("請輸入車牌！"); return; }
         
-        // 將「有清點數量」的品項都指派這台車
+        // 這裡可以選擇：只套用到已搜尋出來的，或是套用到所有「非 0」的品項
         products.forEach(p => {
-            if(p.actQty > 0) {
+            if (p.act > 0) {
                 p.car = car;
                 p.seq = seq;
             }
         });
         closeModal();
         render();
-        alert("指派成功！已清點貨物已連結至車牌 " + car);
+        alert("車牌指派完成！");
     }
 
     function exportExcel() {
-        const rows = [["作業日期", "車牌", "車次", "儲位", "品名", "系統數", "實裝數", "差異", "外觀異常", "備註"]];
-        const date = new Date().toLocaleDateString();
+        const dataRows = [["作業日期", "車牌", "車次", "儲位", "品號", "品名規格", "效期", "預設箱數", "實裝箱數", "差異", "狀態", "備註"]];
+        const today = new Date().toLocaleDateString();
+        
         products.forEach(p => {
-            rows.push([date, p.car, p.seq, p.loc, p.name, p.sysQty, p.actQty, p.actQty - p.sysQty, p.abnormal ? "異常" : "正常", p.note]);
+            dataRows.push([
+                today, p.car || "待指派", p.seq, p.loc, p.item, p.name, p.date, 
+                p.sys, p.act, p.act - p.sys, 
+                p.abnormal ? "外觀異常" : "正常", p.note
+            ]);
         });
-        const ws = XLSX.utils.aoa_to_sheet(rows);
+
+        const ws = XLSX.utils.aoa_to_sheet(dataRows);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "盤點裝車紀錄");
-        XLSX.writeFile(wb, `出貨紀錄_${new Date().getTime()}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "裝車明細");
+        XLSX.writeFile(wb, `出貨裝車單_${new Date().getTime()}.xlsx`);
     }
 
     render();
