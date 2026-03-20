@@ -3,81 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>移倉裝車檢核系統</title>
+    <title>移倉備貨與裝車系統</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --warning: #fd7e14; --dark: #2c3e50; --locked: #95a5a6; }
-        body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; background: #f0f2f5; margin: 0; padding-bottom: 140px; }
+        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --warning: #fd7e14; --dark: #2c3e50; --locked: #7f8c8d; }
+        body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; background: #f4f7f6; margin: 0; padding-bottom: 160px; }
         
-        /* 頂部車輛管理區 */
-        .truck-manager { background: var(--dark); color: white; padding: 15px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-        .truck-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .counter-box { background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 20px; font-size: 14px; }
-        .counter-box.over { background: var(--danger); animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0.5; } }
+        /* 頂部控制區 */
+        .top-panel { background: var(--dark); color: white; padding: 15px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .truck-display { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; }
+        .stats-row { display: flex; gap: 10px; font-size: 12px; margin-top: 5px; }
+        .stat-item { background: rgba(255,255,255,0.1); padding: 3px 8px; border-radius: 4px; }
+        
+        .search-bar { width: 100%; padding: 12px; border: none; border-radius: 5px; font-size: 16px; margin-top: 10px; }
 
-        .search-bar { width: 100%; padding: 10px; border: none; border-radius: 5px; box-sizing: border-box; font-size: 16px; margin-top: 5px; }
-
-        /* 列表樣式 */
+        /* 列表區 */
         .list-container { padding: 10px; }
-        .item-card { background: white; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 6px solid #ddd; position: relative; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .item-card.is-active { border-left-color: var(--primary); }
-        .item-card.is-locked { background: #e9ecef; border-left-color: var(--locked); opacity: 0.8; }
+        .item-card { background: white; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 6px solid #ccc; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .item-card.is-ready { border-left-color: var(--success); } /* 已清點待裝車 */
+        .item-card.is-loaded { border-left-color: var(--primary); background: #e9f2ff; } /* 已上車 */
         .item-card.abnormal { border-left-color: var(--danger); }
 
-        .lock-btn { position: absolute; right: 10px; top: 10px; font-size: 26px; cursor: pointer; border: none; background: none; }
-        .truck-tag { position: absolute; right: 50px; top: 15px; font-size: 11px; color: var(--primary); font-weight: bold; border: 1px solid var(--primary); padding: 1px 5px; border-radius: 3px; }
+        .card-header { display: flex; align-items: flex-start; margin-right: 40px; }
+        .select-check { width: 22px; height: 22px; margin-right: 10px; transform: scale(1.2); }
+        
+        .lock-btn { position: absolute; right: 10px; top: 10px; font-size: 26px; border: none; background: none; }
+        .truck-tag { position: absolute; right: 45px; top: 15px; font-size: 11px; background: var(--primary); color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
 
         .qty-row { display: flex; align-items: center; background: #f8f9fa; padding: 8px; border-radius: 6px; margin-top: 8px; }
         .qty-btn { width: 50px; height: 45px; border: 1px solid #ddd; background: white; font-size: 24px; border-radius: 5px; }
         .qty-btn:disabled { opacity: 0.3; }
-        .qty-val { flex: 1; text-align: center; font-size: 26px; font-weight: bold; color: var(--dark); }
+        .qty-val { flex: 1; text-align: center; font-size: 26px; font-weight: bold; }
 
         /* 底部工具列 */
-        .footer { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; box-shadow: 0 -3px 10px rgba(0,0,0,0.1); z-index: 99; }
-        .btn { padding: 14px; border-radius: 6px; border: none; font-weight: bold; color: white; font-size: 15px; cursor: pointer; }
-        .btn-add-truck { background: var(--warning); }
-        .btn-excel { background: var(--success); }
-
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-content { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 400px; }
-        .input-box { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 12px; border-top: 2px solid #ddd; z-index: 99; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        .btn { padding: 12px; border-radius: 6px; border: none; font-weight: bold; color: white; font-size: 14px; cursor: pointer; text-align: center; }
+        .btn-orange { background: var(--warning); }
+        .btn-blue { background: var(--primary); }
+        .btn-green { background: var(--success); }
+        .btn-gray { background: var(--locked); }
     </style>
 </head>
 <body>
 
-<div class="truck-manager">
-    <div class="truck-info">
+<div class="top-panel">
+    <div class="truck-display">
         <div>
-            <span id="current-car-display" style="font-size: 18px; font-weight: bold;">🚛 點擊新增車輛</span>
+            <span id="car-title" style="font-size: 18px; font-weight: bold;">🚛 待指派車輛</span>
         </div>
-        <div id="pallet-counter" class="counter-box">當前趟次：0 / 14 板</div>
+        <div id="pallet-counter" style="background:var(--primary); padding:4px 10px; border-radius:15px; font-size:13px;">本車：0 / 14</div>
     </div>
-    <input type="text" id="search" class="search-bar" placeholder="🔍 搜尋儲位 (如 1C) 或品名..." onkeyup="render()">
+    <div class="stats-row">
+        <div class="stat-item" id="stat-total">總數：28</div>
+        <div class="stat-item" id="stat-ready">已點待裝：0</div>
+        <div class="stat-item" id="stat-done">已上車：0</div>
+    </div>
+    <input type="text" id="search" class="search-bar" placeholder="🔍 搜尋儲位或品名..." onkeyup="render()">
 </div>
 
 <div class="list-container" id="cardList"></div>
 
 <div class="footer">
-    <button class="btn btn-add-truck" onclick="openModal('truckModal')">➕ 新增/更換車輛</button>
-    <button class="btn btn-excel" onclick="exportExcel()">📊 匯出今日移倉 Excel</button>
+    <div class="btn-group">
+        <button class="btn btn-orange" onclick="openModal('truckModal')">🚛 1. 設定車牌</button>
+        <button class="btn btn-blue" onclick="assignTruck()">📥 2. 指派上車</button>
+    </div>
+    <div style="display: flex; gap: 8px;">
+        <button class="btn btn-green" style="flex: 2;" onclick="exportExcel()">📊 匯出今日移倉 Excel</button>
+        <button class="btn btn-gray" style="flex: 1;" onclick="location.reload()">🔄 重置</button>
+    </div>
 </div>
 
-<!-- 車輛新增彈窗 -->
-<div id="truckModal" class="modal"><div class="modal-content">
-    <h3 style="margin:0 0 10px 0;">🚚 設定當前裝車資訊</h3>
-    <label style="font-size:12px; color:#666;">車牌號碼</label>
-    <input type="text" id="truckId" class="input-box" placeholder="例如: ABC-1234">
-    <label style="font-size:12px; color:#666;">車次 (第幾趟)</label>
-    <input type="number" id="truckSeq" class="input-box" placeholder="例如: 1">
-    <div style="display:flex; gap:10px;">
-        <button class="btn" style="background:#666; flex:1" onclick="closeModal('truckModal')">取消</button>
-        <button class="btn btn-add-truck" style="flex:2" onclick="setTruck()">確認並開始裝車</button>
+<!-- 彈窗 -->
+<div id="truckModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1001; align-items:center; justify-content:center;">
+    <div style="background:white; padding:20px; border-radius:12px; width:85%; max-width:400px;">
+        <h3>🚚 設定目前裝車資訊</h3>
+        <input type="text" id="truckId" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:5px; box-sizing:border-box;" placeholder="輸入車牌號碼">
+        <input type="number" id="truckSeq" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:5px; box-sizing:border-box;" placeholder="輸入車次 (趟次)">
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn btn-gray" style="flex:1" onclick="document.getElementById('truckModal').style.display='none'">取消</button>
+            <button class="btn btn-orange" style="flex:2" onclick="setTruck()">確認車輛</button>
+        </div>
     </div>
-</div></div>
+</div>
 
 <script>
-    // 預載 28 筆資料
+    // 原始品項資料
     const baseItems = [
         {loc:"1C2903", item:"24601003001", name:"冷凍美國CR安格斯牛五花火鍋片袋裝500G", sys:30, date:"20261222"},
         {loc:"1C2904", item:"24601003001", name:"冷凍美國CR安格斯牛五花火鍋片袋裝500G", sys:30, date:"20261222"},
@@ -110,7 +122,7 @@
     ];
 
     let products = JSON.parse(JSON.stringify(baseItems)).map((p, i) => ({ 
-        ...p, id: i, act: p.sys, abnormal: false, locked: false, car: "", seq: "", note: "" 
+        ...p, id: i, act: p.sys, abnormal: false, locked: false, car: "", seq: "", note: "", selected: false 
     }));
     
     let currentTruck = { id: "", seq: "" };
@@ -120,86 +132,18 @@
         const container = document.getElementById('cardList');
         container.innerHTML = "";
         
-        let tripCount = 0;
+        let readyCount = 0; // 已點待裝
+        let doneCount = 0;  // 已上車
+        let tripPallets = 0; // 當前趟次板數
+
+        products.forEach(p => {
+            if (p.locked && !p.car) readyCount++;
+            if (p.car) doneCount++;
+            if (p.car === currentTruck.id && p.seq == currentTruck.seq) tripPallets++;
+        });
 
         products.filter(p => p.loc.includes(key) || p.name.includes(key)).forEach(p => {
-            if(p.car === currentTruck.id && p.seq == currentTruck.seq && p.locked) tripCount++;
-
             const div = document.createElement('div');
-            div.className = `item-card ${p.locked ? 'is-locked' : ''} ${p.abnormal ? 'abnormal' : ''} ${p.car === currentTruck.id && currentTruck.id ? 'is-active' : ''}`;
+            div.className = `item-card ${p.car ? 'is-loaded' : (p.locked ? 'is-ready' : '')} ${p.abnormal ? 'abnormal' : ''}`;
             div.innerHTML = `
                 <button class="lock-btn" onclick="toggleLock(${p.id})">${p.locked ? '🔒' : '🔓'}</button>
-                ${p.car ? `<span class="truck-tag">${p.car}-${p.seq}車</span>` : ''}
-                <div style="font-weight:bold; margin-bottom:5px;">
-                    <span style="background:var(--dark); color:white; padding:2px 6px; border-radius:4px; font-size:12px;">${p.loc}</span> 
-                    <span style="font-size:14px; margin-left:5px;">${p.name}</span>
-                </div>
-                <div style="font-size:11px; color:#666;">品號: ${p.item} | 效期: ${p.date}</div>
-                <div class="qty-row">
-                    <button class="qty-btn" onclick="updateQty(${p.id}, -1)" ${p.locked ? 'disabled' : ''}>-</button>
-                    <div class="qty-val">${p.act}</div>
-                    <button class="qty-btn" onclick="updateQty(${p.id}, 1)" ${p.locked ? 'disabled' : ''}>+</button>
-                </div>
-                <div style="display:flex; align-items:center; margin-top:8px; gap:10px;">
-                    <label style="font-size:13px;"><input type="checkbox" ${p.abnormal ? 'checked' : ''} onchange="toggleAb(${p.id})" ${p.locked ? 'disabled' : ''}> 異常</label>
-                    <input type="text" class="input-box" style="margin:0; height:30px; font-size:12px;" placeholder="備註..." value="${p.note}" onchange="updateNote(${p.id}, this.value)" ${p.locked ? 'disabled' : ''}>
-                </div>
-            `;
-            container.appendChild(div);
-        });
-
-        // 更新計數器
-        const counter = document.getElementById('pallet-counter');
-        counter.innerText = `當前趟次：${tripCount} / 14 板`;
-        counter.className = `counter-box ${tripCount >= 14 ? 'over' : ''}`;
-    }
-
-    function toggleLock(id) {
-        if (!currentTruck.id) { alert("請先點擊下方按鈕設定『新增車輛』資訊！"); openModal('truckModal'); return; }
-        const p = products.find(i => i.id === id);
-        p.locked = !p.locked;
-        if (p.locked) {
-            p.car = currentTruck.id;
-            p.seq = currentTruck.seq;
-        } else {
-            p.car = ""; p.seq = "";
-        }
-        render();
-    }
-
-    function setTruck() {
-        const id = document.getElementById('truckId').value;
-        const seq = document.getElementById('truckSeq').value;
-        if (!id || !seq) { alert("請填寫車牌與車次"); return; }
-        currentTruck = { id: id.toUpperCase(), seq: seq };
-        document.getElementById('current-car-display').innerText = `🚚 ${currentTruck.id} (第 ${currentTruck.seq} 趟)`;
-        closeModal('truckModal');
-        render();
-    }
-
-    function updateQty(id, d) { products.find(p=>p.id===id).act += d; render(); }
-    function toggleAb(id) { products.find(p=>p.id===id).abnormal = !products.find(p=>p.id===id).abnormal; render(); }
-    function updateNote(id, v) { products.find(p=>p.id===id).note = v; }
-    function openModal(id) { document.getElementById(id).style.display='flex'; }
-    function closeModal(id) { document.getElementById(id).style.display='none'; }
-
-    function exportExcel() {
-        const rows = [["作業日期", "車牌號碼", "車次", "儲位", "品號", "品名規格", "預設數", "實裝數", "差異", "狀態", "備註"]];
-        const now = new Date();
-        const dateStr = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
-        
-        products.forEach(p => {
-            let status = p.locked ? "完成" : (p.abnormal ? "外觀異常" : "待處理");
-            rows.push([dateStr, p.car, p.seq, p.loc, p.item, p.name, p.sys, p.act, p.act - p.sys, status, p.note]);
-        });
-
-        const ws = XLSX.utils.aoa_to_sheet(rows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "移倉紀錄");
-        XLSX.writeFile(wb, `${dateStr}_移倉.xlsx`);
-    }
-
-    render();
-</script>
-</body>
-</html>
