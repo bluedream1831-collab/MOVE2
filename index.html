@@ -3,118 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>當日出貨盤點系統 - 具鎖定功能</title>
+    <title>出貨盤點系統 - Excel 專業版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --manual: #6f42c1; --locked: #95a5a6; }
+        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --manual: #6f42c1; --locked: #7f8c8d; }
         body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; background: #f4f7f6; margin: 0; padding-bottom: 120px; }
         
+        /* 頁首樣式 */
         .header { background: #2c3e50; color: white; padding: 15px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .search-bar { width: 100%; padding: 10px; border: none; border-radius: 5px; box-sizing: border-box; font-size: 16px; margin-top: 10px; }
+        .search-bar { width: 100%; padding: 12px; border: none; border-radius: 5px; box-sizing: border-box; font-size: 16px; margin-top: 10px; }
         
+        /* 列表樣式 */
         .list-container { padding: 10px; }
-        .item-card { background: white; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 6px solid var(--primary); position: relative; transition: 0.3s; }
+        .item-card { background: white; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 6px solid var(--primary); position: relative; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         
-        /* 鎖定狀態樣式 */
-        .item-card.is-locked { background: #e9ecef; border-left-color: var(--locked); opacity: 0.8; }
-        .item-card.is-manual { border-left-color: var(--manual); }
+        .item-card.is-locked { background: #f1f2f6; border-left-color: var(--locked); opacity: 0.9; }
         .item-card.abnormal { border-left-color: var(--danger); }
+        .item-card.is-manual { border-left-color: var(--manual); }
 
-        .lock-btn { position: absolute; right: 10px; top: 10px; font-size: 20px; cursor: pointer; border: none; background: none; padding: 5px; }
-        .locked-badge { position: absolute; right: 50px; top: 12px; font-size: 11px; color: var(--locked); font-weight: bold; }
+        .lock-btn { position: absolute; right: 10px; top: 10px; font-size: 24px; cursor: pointer; border: none; background: none; }
+        .status-badge { position: absolute; right: 45px; top: 14px; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
+        .badge-done { color: white; background: var(--locked); }
 
+        /* 數量按鈕 */
         .qty-row { display: flex; align-items: center; background: #f8f9fa; padding: 10px; border-radius: 6px; margin-top: 8px; }
-        .qty-btn { width: 50px; height: 40px; border: 1px solid #ddd; background: white; font-size: 22px; border-radius: 5px; cursor: pointer; transition: 0.2s; }
-        .qty-btn:disabled { background: #eee; cursor: not-allowed; color: #ccc; }
-        .qty-val { flex: 1; text-align: center; font-size: 24px; font-weight: bold; color: var(--success); }
-        .is-locked .qty-val { color: var(--locked); }
+        .qty-btn { width: 55px; height: 45px; border: 1px solid #ddd; background: white; font-size: 24px; font-weight: bold; border-radius: 5px; cursor: pointer; }
+        .qty-btn:disabled { background: #ddd; color: #aaa; }
+        .qty-val { flex: 1; text-align: center; font-size: 26px; font-weight: bold; color: var(--primary); }
 
-        .footer { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; box-shadow: 0 -3px 10px rgba(0,0,0,0.1); z-index: 99; }
-        .btn { padding: 12px; border-radius: 6px; border: none; font-weight: bold; color: white; font-size: 14px; cursor: pointer; text-align: center; }
+        /* 底部工具列 */
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 15px; display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; box-shadow: 0 -3px 10px rgba(0,0,0,0.1); z-index: 99; }
+        .btn { padding: 14px; border-radius: 6px; border: none; font-weight: bold; color: white; font-size: 15px; cursor: pointer; text-align: center; }
         .btn-blue { background: var(--primary); }
-        .btn-pdf { background: #e67e22; }
         .btn-green { background: var(--success); }
-        .fab { position: fixed; bottom: 100px; right: 20px; width: 56px; height: 56px; border-radius: 28px; background: var(--manual); color: white; font-size: 30px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 98; }
+        
+        /* 懸浮新增按鈕 */
+        .fab { position: fixed; bottom: 105px; right: 20px; width: 60px; height: 60px; border-radius: 30px; background: var(--manual); color: white; font-size: 32px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 98; }
 
-        /* PDF 樣式 (同前次優化) */
-        #print-area { display: none; }
-        @media print {
-            @page { size: A4 landscape; margin: 1cm; }
-            .no-print, .footer, .fab, .header, .list-container, .lock-btn { display: none !important; }
-            #print-area { display: block !important; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { border: 1px solid #000; padding: 6px; font-size: 12px; }
-            th { background: #f2f2f2 !important; }
-            .report-title { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 10px; }
-            .report-info { display: flex; justify-content: space-between; font-size: 13px; border-bottom: 2px solid #000; padding-bottom: 5px; }
-        }
-
+        /* 彈窗 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; }
         .modal-content { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 400px; }
-        .input-box { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .input-box { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
     </style>
 </head>
 <body>
 
-<div class="header no-print">
+<div class="header">
     <div style="display:flex; justify-content: space-between; align-items:center;">
-        <strong>📋 出貨檢核系統</strong>
-        <span id="display-car" style="font-size:12px; background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:10px;">待指派車輛</span>
+        <strong>📋 出貨檢核系統 (Excel 版)</strong>
+        <span id="display-car" style="font-size:12px; background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:10px;">尚未指派車輛</span>
     </div>
     <input type="text" id="search" class="search-bar" placeholder="🔍 搜尋儲位或品名..." onkeyup="render()">
 </div>
 
-<div class="list-container no-print" id="cardList"></div>
+<div class="list-container" id="cardList"></div>
 
-<div class="footer no-print">
+<div class="footer">
     <button class="btn btn-blue" onclick="openModal('carModal')">🚛 指派車牌</button>
-    <button class="btn btn-pdf" onclick="generatePDF()">📄 產生 PDF</button>
-    <button class="btn btn-green" onclick="exportExcel()" style="grid-column: span 2;">📊 匯出 Excel 檔案</button>
+    <button class="btn btn-green" onclick="exportExcel()">📊 匯出 Excel 總表</button>
 </div>
 
-<button class="fab no-print" onclick="openAddModal()">＋</button>
+<button class="fab" onclick="openAddModal()">＋</button>
 
-<!-- PDF 列印區域 -->
-<div id="print-area">
-    <div class="report-title">當日出貨盤點明細</div>
-    <div class="report-info">
-        <div id="p-car">車牌號碼：未指派</div>
-        <div id="p-date">作業日期：</div>
-    </div>
-    <table>
-        <thead>
-            <tr>
-                <th>儲位</th>
-                <th>品號</th>
-                <th style="width:35%">品名規格</th>
-                <th>有效日期</th>
-                <th>預設</th>
-                <th>實裝</th>
-                <th>狀態/備註</th>
-            </tr>
-        </thead>
-        <tbody id="print-tbody"></tbody>
-    </table>
-    <p style="text-align:right; margin-top:30px;">簽核人簽名：____________________</p>
-</div>
-
-<!-- 彈窗 -->
+<!-- 彈窗內容 -->
 <div id="carModal" class="modal"><div class="modal-content">
-    <h3>車輛資訊</h3>
-    <input type="text" id="carId" class="input-box" placeholder="車牌號碼">
-    <input type="number" id="carSeq" class="input-box" placeholder="當日車次">
-    <button class="btn btn-blue" style="width:100%" onclick="saveCar()">確認</button>
+    <h3>物流車輛資訊</h3>
+    <input type="text" id="carId" class="input-box" placeholder="車牌號碼 (例: ABC-1234)">
+    <input type="number" id="carSeq" class="input-box" placeholder="車次 (例: 1)">
+    <button class="btn btn-blue" style="width:100%" onclick="saveCar()">確認指派</button>
 </div></div>
 
 <div id="addModal" class="modal"><div class="modal-content">
-    <h3>➕ 新增臨時品項</h3>
+    <h3 style="color:var(--manual)">➕ 新增臨時品項</h3>
     <input type="text" id="newLoc" class="input-box" placeholder="儲位">
     <input type="text" id="newName" class="input-box" placeholder="品名規格">
-    <input type="number" id="newQty" class="input-box" placeholder="數量">
-    <button class="btn" style="width:100%; background:var(--manual)" onclick="addNew()">加入</button>
+    <input type="number" id="newQty" class="input-box" placeholder="實裝數量">
+    <button class="btn" style="width:100%; background:var(--manual)" onclick="addNew()">加入清單</button>
 </div></div>
 
 <script>
+    // 預錄所有 28 筆資料
     const rawData = [
         {loc:"1C2903", item:"24601003001", name:"冷凍美國CR安格斯牛五花火鍋片袋裝500G", sys:30, date:"20261222"},
         {loc:"1C2904", item:"24601003001", name:"冷凍美國CR安格斯牛五花火鍋片袋裝500G", sys:30, date:"20261222"},
@@ -155,25 +123,23 @@
         container.innerHTML = "";
         products.filter(p => p.loc.includes(key) || p.name.includes(key)).forEach(p => {
             const div = document.createElement('div');
-            div.className = `item-card ${p.locked ? 'is-locked' : ''} ${p.isManual ? 'is-manual' : ''} ${p.abnormal ? 'abnormal' : ''}`;
+            div.className = `item-card ${p.locked ? 'is-locked' : ''} ${p.abnormal ? 'abnormal' : ''} ${p.isManual ? 'is-manual' : ''}`;
             div.innerHTML = `
                 <button class="lock-btn" onclick="toggleLock(${p.id})">${p.locked ? '🔒' : '🔓'}</button>
-                ${p.locked ? '<span class="locked-badge">已完成</span>' : ''}
-                <div style="display:flex; align-items:flex-start; margin-right:30px;">
+                ${p.locked ? '<span class="status-badge badge-done">已完成</span>' : ''}
+                <div style="display:flex; align-items:flex-start; margin-right:40px;">
                     <span style="background:#34495e; color:white; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:12px;">${p.loc}</span>
                     <span style="flex:1; margin-left:8px; font-weight:bold; font-size:14px;">${p.name}</span>
                 </div>
-                <div style="font-size:11px; color:#666; margin-top:4px;">預設: ${p.sys} | 效期: ${p.date || '--'}</div>
+                <div style="font-size:11px; color:#666; margin-top:5px;">品號: ${p.item} | 效期: ${p.date || '--'}</div>
                 <div class="qty-row">
                     <button class="qty-btn" onclick="updateQty(${p.id}, -1)" ${p.locked ? 'disabled' : ''}>-</button>
                     <div class="qty-val">${p.act}</div>
                     <button class="qty-btn" onclick="updateQty(${p.id}, 1)" ${p.locked ? 'disabled' : ''}>+</button>
                 </div>
-                <div style="display:flex; align-items:center; margin-top:8px; gap:10px;">
-                    <label style="font-size:12px; display:flex; align-items:center;">
-                        <input type="checkbox" ${p.abnormal ? 'checked' : ''} onchange="toggleAb(${p.id})" ${p.locked ? 'disabled' : ''}> 異常
-                    </label>
-                    <input type="text" class="input-box" style="margin:0; height:28px; font-size:11px;" placeholder="備註..." value="${p.note}" onchange="updateNote(${p.id}, this.value)" ${p.locked ? 'disabled' : ''}>
+                <div style="display:flex; align-items:center; margin-top:10px; gap:10px;">
+                    <label style="font-size:13px; font-weight:bold;"><input type="checkbox" ${p.abnormal ? 'checked' : ''} onchange="toggleAb(${p.id})" ${p.locked ? 'disabled' : ''}> 外觀異常</label>
+                    <input type="text" class="input-box" style="margin:0; height:32px; font-size:12px;" placeholder="備註..." value="${p.note}" onchange="updateNote(${p.id}, this.value)" ${p.locked ? 'disabled' : ''}>
                 </div>
             `;
             container.appendChild(div);
@@ -186,33 +152,24 @@
     function updateNote(id, v) { products.find(p=>p.id===id).note = v; }
     function openModal(m) { document.getElementById(m).style.display='flex'; }
     function closeModal(m) { document.getElementById(m).style.display='none'; }
-    function openAddModal() { openModal('addModal'); }
     function saveCar() { carInfo.id = document.getElementById('carId').value; carInfo.seq = document.getElementById('carSeq').value; document.getElementById('display-car').innerText = `🚚 ${carInfo.id} (第${carInfo.seq}車)`; closeModal('carModal'); }
-    function addNew() { products.push({ id: Date.now(), loc: document.getElementById('newLoc').value, item: "臨時", name: document.getElementById('newName').value, sys: 0, act: parseInt(document.getElementById('newQty').value)||0, isManual: true, abnormal: false, locked: false, note: "追加" }); closeModal('addModal'); render(); }
+    function openAddModal() { openModal('addModal'); }
+    function addNew() { products.push({ id: Date.now(), loc: document.getElementById('newLoc').value, item: "臨時追加", name: document.getElementById('newName').value, sys: 0, act: parseInt(document.getElementById('newQty').value)||0, isManual: true, abnormal: false, locked: false, note: "現場追加" }); closeModal('addModal'); render(); }
 
     function exportExcel() {
-        const rows = [["日期", "車牌", "車次", "儲位", "品號", "品名", "預設", "實裝", "狀態", "備註"]];
+        const rows = [["作業日期", "車牌", "車次", "儲位", "品號", "品名規格", "預設數", "實裝數", "差異", "狀態", "備註"]];
         const date = new Date().toLocaleDateString();
-        products.forEach(p => rows.push([date, carInfo.id, carInfo.seq, p.loc, p.item, p.name, p.sys, p.act, (p.abnormal?'異常':'')+(p.locked?'/已鎖定':''), p.note]));
+        products.forEach(p => {
+            // 邏輯：鎖定顯示完成，否則看異常，其餘待處理
+            let status = p.locked ? "完成" : (p.abnormal ? "外觀異常" : "待處理");
+            rows.push([date, carInfo.id, carInfo.seq, p.loc, p.item, p.name, p.sys, p.act, p.act - p.sys, status, p.note]);
+        });
         const ws = XLSX.utils.aoa_to_sheet(rows);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "盤點明細");
-        XLSX.writeFile(wb, `出貨盤點_${date}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "裝車檢核表");
+        XLSX.writeFile(wb, `裝車盤點總表_${date}.xlsx`);
     }
 
-    function generatePDF() {
-        const today = new Date().toLocaleDateString();
-        document.getElementById('p-date').innerText = "作業日期：" + today;
-        document.getElementById('p-car').innerText = "車牌號碼：" + (carInfo.id || "未指派") + (carInfo.seq ? " (第 "+carInfo.seq+" 車)" : "");
-        const tbody = document.getElementById('print-tbody');
-        tbody.innerHTML = "";
-        products.forEach(p => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${p.loc}</td><td>${p.item}</td><td>${p.name}</td><td>${p.date||'--'}</td><td>${p.sys}</td><td>${p.act}</td><td>${(p.abnormal?'異常 ':'')+p.note}</td>`;
-            tbody.appendChild(tr);
-        });
-        window.print();
-    }
     render();
 </script>
 </body>
