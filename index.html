@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>行動盤點與裝車系統</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --gray: #6c757d; }
+        body { font-family: -apple-system, sans-serif; background: #f0f2f5; margin: 0; padding-bottom: 80px; }
+        
+        /* 頂部固定區 */
+        .header { background: white; padding: 15px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .search-bar { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 25px; box-sizing: border-box; font-size: 16px; margin-top: 10px; }
+        
+        /* 卡片清單 */
+        .list-container { padding: 10px; }
+        .item-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; border-left: 6px solid var(--gray); transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .item-card.completed { border-left-color: var(--success); background: #f8fff9; }
+        .item-card.abnormal { border-left-color: var(--danger); background: #fff8f8; }
+
+        .item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .item-loc { background: #333; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .item-name { font-weight: bold; font-size: 16px; flex: 1; margin: 0 10px; color: #333; }
+        
+        .item-info { font-size: 13px; color: #666; margin-bottom: 10px; }
+
+        /* 數量控制器 */
+        .qty-controls { display: flex; align-items: center; justify-content: space-between; background: #f8f9fa; padding: 10px; border-radius: 8px; }
+        .qty-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: white; font-size: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; }
+        .qty-val { font-size: 20px; font-weight: bold; color: var(--primary); }
+        
+        /* 下方操作列 */
+        .footer-tools { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 10px; display: flex; gap: 10px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+        .btn { flex: 1; padding: 12px; border-radius: 8px; border: none; font-weight: bold; color: white; font-size: 14px; }
+        .btn-excel { background: var(--success); }
+        .btn-assign { background: var(--primary); }
+
+        /* 彈窗 */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 20px; border-radius: 12px; width: 80%; }
+        .input-field { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: bold; font-size: 18px;">📦 倉庫出貨助手</span>
+        <span id="globalDate" style="font-size: 14px; color: #666;"></span>
+    </div>
+    <input type="text" id="search" class="search-bar" placeholder="搜尋儲位、品名..." onkeyup="render()">
+</div>
+
+<div class="list-container" id="itemList">
+    <!-- 卡片會動態生成於此 -->
+</div>
+
+<div class="footer-tools">
+    <button class="btn btn-assign" onclick="openAssignModal()">🚛 指定車牌</button>
+    <button class="btn btn-excel" onclick="exportExcel()">📊 匯出 Excel</button>
+</div>
+
+<!-- 指定車牌彈窗 -->
+<div id="assignModal" class="modal">
+    <div class="modal-content">
+        <h3>批次指定車牌</h3>
+        <p style="font-size: 14px; color: #666;">輸入車牌後，將套用到所有已清點的品項</p>
+        <input type="text" id="modalCarNum" class="input-field" placeholder="輸入車牌 (如: ABC-1234)">
+        <input type="number" id="modalCarSeq" class="input-field" placeholder="車次 (第幾台)">
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button class="btn" style="background: #ccc;" onclick="closeModal()">取消</button>
+            <button class="btn btn-assign" onclick="applyAssign()">確定套用</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 預設資料
+    let products = [
+        { id: 1, loc: "1C2903", name: "冷凍美國CR安格斯牛五花火鍋片袋裝500G", date: "20261222", sysQty: 30, actQty: 0, car: "", seq: "", abnormal: false, note: "" },
+        { id: 2, loc: "3B0301", name: "立大冷凍豬五花火鍋肉片1000G", date: "20270130", sysQty: 50, actQty: 0, car: "", seq: "", abnormal: false, note: "" },
+        { id: 3, loc: "3B3901", name: "泉泓起酥蛋糕(家庭號)", date: "20260901", sysQty: 23, actQty: 0, car: "", seq: "", abnormal: false, note: "" },
+        { id: 4, loc: "4B1802", name: "威保 - 美國冷凍去骨腿排", date: "20270202", sysQty: 42, actQty: 0, car: "", seq: "", abnormal: false, note: "" }
+    ];
+
+    document.getElementById('globalDate').innerText = new Date().toLocaleDateString();
+
+    function render() {
+        const keyword = document.getElementById('search').value.toUpperCase();
+        const container = document.getElementById('itemList');
+        container.innerHTML = "";
+
+        products.filter(p => p.loc.includes(keyword) || p.name.includes(keyword)).forEach(p => {
+            const isDone = p.actQty > 0;
+            const div = document.createElement('div');
+            div.className = `item-card ${isDone ? 'completed' : ''} ${p.abnormal ? 'abnormal' : ''}`;
+            div.innerHTML = `
+                <div class="item-header">
+                    <span class="item-loc">${p.loc}</span>
+                    <span class="item-name">${p.name}</span>
+                    <input type="checkbox" ${p.abnormal ? 'checked' : ''} onchange="toggleAbnormal(${p.id})"> <span style="font-size:12px; color:red">異常</span>
+                </div>
+                <div class="item-info">
+                    效期: ${p.date} | 系統: <b>${p.sysQty}</b> | 
+                    <span style="color:blue">${p.car ? '🚚 '+p.car : '⏳ 待指定車輛'}</span>
+                </div>
+                <div class="qty-controls">
+                    <button class="qty-btn" onclick="changeQty(${p.id}, -1)">-</button>
+                    <div style="text-align:center">
+                        <div class="qty-val">${p.actQty}</div>
+                        <div style="font-size:10px; color:#999">實裝數量</div>
+                    </div>
+                    <button class="qty-btn" onclick="changeQty(${p.id}, 1)">+</button>
+                </div>
+                <input type="text" class="input-field" style="margin-top:10px; padding:5px; font-size:12px;" placeholder="異常原因或備註..." value="${p.note}" onchange="updateNote(${p.id}, this.value)">
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function changeQty(id, delta) {
+        const p = products.find(i => i.id === id);
+        p.actQty = Math.max(0, p.actQty + delta);
+        render();
+    }
+
+    function toggleAbnormal(id) {
+        const p = products.find(i => i.id === id);
+        p.abnormal = !p.abnormal;
+        render();
+    }
+
+    function updateNote(id, val) {
+        products.find(i => i.id === id).note = val;
+    }
+
+    // 彈窗功能
+    function openAssignModal() { document.getElementById('assignModal').style.display = 'flex'; }
+    function closeModal() { document.getElementById('assignModal').style.display = 'none'; }
+    
+    function applyAssign() {
+        const car = document.getElementById('modalCarNum').value;
+        const seq = document.getElementById('modalCarSeq').value;
+        if(!car) { alert("請輸入車牌"); return; }
+        
+        // 將「有清點數量」的品項都指派這台車
+        products.forEach(p => {
+            if(p.actQty > 0) {
+                p.car = car;
+                p.seq = seq;
+            }
+        });
+        closeModal();
+        render();
+        alert("指派成功！已清點貨物已連結至車牌 " + car);
+    }
+
+    function exportExcel() {
+        const rows = [["作業日期", "車牌", "車次", "儲位", "品名", "系統數", "實裝數", "差異", "外觀異常", "備註"]];
+        const date = new Date().toLocaleDateString();
+        products.forEach(p => {
+            rows.push([date, p.car, p.seq, p.loc, p.name, p.sysQty, p.actQty, p.actQty - p.sysQty, p.abnormal ? "異常" : "正常", p.note]);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "盤點裝車紀錄");
+        XLSX.writeFile(wb, `出貨紀錄_${new Date().getTime()}.xlsx`);
+    }
+
+    render();
+</script>
+</body>
+</html>
