@@ -3,92 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>移倉池化管理系統</title>
+    <title>移倉裝車管理系統 - 上車版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --warning: #fd7e14; --dark: #2c3e50; --pool: #6f42c1; --gray: #95a5a6; }
-        body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; background: #f8f9fa; margin: 0; padding-bottom: 140px; }
+        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --warning: #ffc107; --dark: #212529; --load: #6f42c1; --gray: #adb5bd; }
+        body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; background: #f1f3f5; margin: 0; padding-bottom: 80px; }
         
-        /* 頂部狀態列 */
-        .top-bar { background: var(--dark); color: white; padding: 15px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-        .truck-status { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin-top: 10px; }
-        .capacity-bar { flex: 1; margin: 0 15px; height: 10px; background: #444; border-radius: 5px; overflow: hidden; position: relative; }
-        .capacity-fill { height: 100%; background: var(--success); transition: 0.3s; width: 0%; }
-        .capacity-fill.full { background: var(--danger); }
+        /* 頂部車位看板 */
+        .truck-board { background: var(--dark); padding: 10px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .truck-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+        .truck-slot { background: #343a40; border: 2px solid transparent; border-radius: 6px; padding: 8px; color: #fff; text-align: center; cursor: pointer; transition: 0.2s; }
+        .truck-slot.active { border-color: var(--primary); background: #495057; }
+        .truck-slot.has-data { border-bottom: 4px solid var(--success); }
+        .truck-slot.full { border-bottom: 4px solid var(--danger); }
+        .truck-slot .plate { font-size: 13px; font-weight: bold; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .truck-slot .count { font-size: 11px; color: var(--gray); }
 
-        /* 搜尋與過濾 */
-        .filter-area { padding: 10px; background: #fff; display: flex; gap: 5px; border-bottom: 1px solid #ddd; }
-        .search-bar { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; }
+        /* 搜尋 */
+        .search-area { background: #fff; padding: 10px; border-bottom: 1px solid #dee2e6; }
+        .search-bar { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
 
         /* 卡片清單 */
         .list-container { padding: 10px; }
-        .item-card { background: white; border-radius: 10px; padding: 15px; margin-bottom: 12px; border-left: 6px solid var(--gray); position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
-        
-        /* 狀態顏色 */
-        .item-card.is-locked { border-left-color: var(--pool); } /* 已清點，待上車 */
-        .item-card.on-truck { border-left-color: var(--success); background: #f0fdf4; } /* 已上車 */
-        .item-card.abnormal { border-left-color: var(--danger); }
+        .item-card { background: white; border-radius: 10px; padding: 15px; margin-bottom: 12px; border-left: 6px solid var(--gray); position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .item-card.is-locked { border-left-color: var(--load); }
+        .item-card.on-truck { border-left-color: var(--success); background: #f8fff9; }
 
-        .lock-icon { position: absolute; right: 15px; top: 15px; font-size: 24px; }
-        .card-tag { font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; font-weight: bold; }
-        .tag-pool { background: var(--pool); color: white; }
+        .card-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; font-weight: bold; vertical-align: middle; }
+        .tag-load { background: var(--load); color: white; }
         .tag-truck { background: var(--success); color: white; }
 
-        .qty-row { display: flex; align-items: center; background: #f1f3f5; padding: 10px; border-radius: 8px; margin: 10px 0; }
-        .qty-btn { width: 50px; height: 45px; border: 1px solid #dee2e6; background: white; font-size: 24px; border-radius: 5px; cursor: pointer; }
-        .qty-val { flex: 1; text-align: center; font-size: 28px; font-weight: bold; color: var(--dark); }
+        .qty-row { display: flex; align-items: center; background: #f8f9fa; padding: 8px; border-radius: 6px; margin: 10px 0; }
+        .qty-btn { width: 45px; height: 45px; border: 1px solid #ddd; background: #fff; font-size: 22px; border-radius: 5px; cursor: pointer; }
+        .qty-val { flex: 1; text-align: center; font-size: 26px; font-weight: bold; color: var(--dark); }
 
-        /* 底部操作 */
-        .footer { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; box-shadow: 0 -3px 15px rgba(0,0,0,0.1); }
-        .btn { padding: 15px; border-radius: 8px; border: none; font-weight: bold; font-size: 16px; cursor: pointer; color: white; }
-        .btn-truck { background: var(--warning); color: #333; }
-        .btn-excel { background: var(--success); }
-        .btn-assign { background: var(--primary); width: 100%; margin-top: 10px; }
+        /* 按鈕樣式 */
+        .btn { padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; }
+        .btn-assign { background: var(--primary); color: white; margin-top: 8px; }
+        .btn-load { background: var(--load); color: white; }
+        .btn-excel { background: var(--success); color: white; position: fixed; bottom: 15px; left: 15px; right: 15px; z-index: 90; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+
+        .lock-icon { position: absolute; right: 10px; top: 10px; font-size: 24px; cursor: pointer; border: none; background: none; }
 
         /* 彈窗 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 450px; }
-        .input-box { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        .modal-content { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 400px; }
+        .input-box { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
     </style>
 </head>
 <body>
 
-<div class="top-bar">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <strong id="date-display"></strong>
-        <small id="truck-title">尚未選定裝車趟次</small>
+<div class="truck-board">
+    <div style="color:white; font-size:12px; margin-bottom:8px; display:flex; justify-content:space-between;">
+        <span>🚛 裝車看板 (點擊切換車位 / 長按修改車牌)</span>
+        <span id="date-label"></span>
     </div>
-    <div class="truck-status">
-        <span style="font-size:12px;">裝載進度</span>
-        <div class="capacity-bar"><div id="capacity-fill" class="capacity-fill"></div></div>
-        <span id="capacity-text" style="font-size:12px; font-weight:bold;">0 / 14</span>
+    <div class="truck-grid" id="truckGrid">
+        <!-- 6個車位由 JS 生成 -->
     </div>
 </div>
 
-<div class="filter-area">
-    <input type="text" id="search" class="search-bar" placeholder="🔍 搜尋品名、品號或儲位..." onkeyup="render()">
+<div class="search-area">
+    <input type="text" id="search" class="search-bar" placeholder="🔍 搜尋儲位、品名或品號..." onkeyup="render()">
 </div>
 
 <div class="list-container" id="cardList"></div>
 
-<div class="footer">
-    <button class="btn btn-truck" onclick="openModal('truckModal')">🚚 設定/切換車輛</button>
-    <button class="btn btn-excel" onclick="exportExcel()">📊 匯出移倉 Excel</button>
-</div>
+<button class="btn btn-excel" onclick="exportExcel()">📊 匯出今日移倉總表 (Excel)</button>
 
-<!-- 彈窗：設定車輛 -->
+<!-- 彈窗：設定車牌 -->
 <div id="truckModal" class="modal"><div class="modal-content">
-    <h3>🚚 當前派車設定</h3>
-    <input type="text" id="truckId" class="input-box" placeholder="輸入車牌 (例: ABC-1234)">
-    <input type="number" id="truckSeq" class="input-box" placeholder="輸入車次 (例: 1)">
-    <div style="display:flex; gap:10px;">
-        <button class="btn" style="background:#666; flex:1" onclick="closeModal('truckModal')">取消</button>
-        <button class="btn btn-truck" style="flex:2; color:white; background:var(--primary)" onclick="setTruck()">確認車輛</button>
+    <h3 id="modalTitle">設定車位資訊</h3>
+    <input type="text" id="truckPlate" class="input-box" placeholder="輸入車牌 (例: ABC-1234)">
+    <input type="number" id="truckSeq" class="input-box" placeholder="輸入車次/趟序 (例: 1)">
+    <div style="display:flex; gap:10px; margin-top:10px;">
+        <button class="btn" style="background:#eee; color:#333; flex:1" onclick="closeModal()">取消</button>
+        <button class="btn btn-assign" style="flex:2" onclick="saveTruckInfo()">確認設定</button>
     </div>
 </div></div>
 
 <script>
-    const baseData = [
+    const rawData = [
         {loc:"1C2903", item:"24601003001", name:"冷凍美國CR安格斯牛五花火鍋片袋裝500G", sys:30, date:"20261222"},
         {loc:"1C2904", item:"24601003001", name:"冷凍美國CR安格斯牛五花火鍋片袋裝500G", sys:30, date:"20261222"},
         {loc:"1C3001", item:"24601003001", name:"冷凍美國CR安格斯牛五花火鍋片袋裝500G", sys:30, date:"20261222"},
@@ -119,126 +114,125 @@
         {loc:"4B1803", item:"24920267001", name:"威保 - 美國冷凍去骨腿排", sys:42, date:"20270202"}
     ];
 
-    let products = JSON.parse(JSON.stringify(baseData)).map((p, i) => ({ 
-        ...p, id: i, act: p.sys, locked: false, car: "", seq: "", note: "" 
-    }));
+    let truckSlots = Array.from({length: 6}, (_, i) => ({ id: i, plate: "", seq: 1 }));
+    let activeSlotIndex = 0;
     
-    let currentTruck = { id: "", seq: "" };
+    let products = JSON.parse(JSON.stringify(rawData)).map((p, i) => ({ 
+        ...p, id: i, act: p.sys, locked: false, truckIdx: -1, note: "" 
+    }));
+
     const today = new Date();
     const dateStr = today.getFullYear() + String(today.getMonth() + 1).padStart(2, '0') + String(today.getDate()).padStart(2, '0');
-    document.getElementById('date-display').innerText = dateStr;
+    document.getElementById('date-label').innerText = dateStr;
 
     function render() {
+        // 渲染車位看板
+        const grid = document.getElementById('truckGrid');
+        grid.innerHTML = "";
+        truckSlots.forEach((slot, idx) => {
+            const count = products.filter(p => p.truckIdx === idx).length;
+            const div = document.createElement('div');
+            div.className = `truck-slot ${activeSlotIndex === idx ? 'active' : ''} ${count > 0 ? 'has-data' : ''} ${count >= 14 ? 'full' : ''}`;
+            div.innerHTML = `<span class="plate">${slot.plate || `車位 ${idx+1}`}</span><span class="count">${count} / 14 板</span>`;
+            div.onclick = () => {
+                if (activeSlotIndex === idx || !slot.plate) editTruck(idx);
+                else { activeSlotIndex = idx; render(); }
+            };
+            grid.appendChild(div);
+        });
+
+        // 渲染清單
         const key = document.getElementById('search').value.toUpperCase();
         const container = document.getElementById('cardList');
         container.innerHTML = "";
         
-        let currentLoad = 0;
-
         products.filter(p => p.loc.includes(key) || p.name.includes(key) || p.item.includes(key)).forEach(p => {
-            const isOnThisTruck = p.car === currentTruck.id && p.seq == currentTruck.seq && p.car !== "";
-            if(isOnThisTruck) currentLoad++;
+            const isOnTruck = p.truckIdx !== -1;
+            const isOnCurrentTruck = p.truckIdx === activeSlotIndex;
 
             const div = document.createElement('div');
-            div.className = `item-card ${p.locked ? 'is-locked' : ''} ${isOnThisTruck ? 'on-truck' : ''}`;
-            
+            div.className = `item-card ${p.locked ? 'is-locked' : ''} ${isOnCurrentTruck ? 'on-truck' : ''}`;
             div.innerHTML = `
-                <div class="lock-icon">${p.locked ? (isOnThisTruck ? '✅' : '🔒') : '🔓'}</div>
+                <button class="lock-icon" onclick="toggleLock(${p.id})">${p.locked ? (isOnCurrentTruck ? '✅' : '🔒') : '🔓'}</button>
                 <div style="margin-bottom:8px;">
-                    ${p.locked ? `<span class="card-tag tag-pool">已入池清點</span>` : ''}
-                    ${isOnThisTruck ? `<span class="card-tag tag-truck">已裝入 ${p.car}</span>` : ''}
-                    <span style="background:var(--dark); color:white; padding:2px 6px; border-radius:4px; font-size:12px; font-family:monospace;">${p.loc}</span>
+                    ${p.locked ? `<span class="card-tag tag-load">已清點上車</span>` : ''}
+                    ${isOnTruck ? `<span class="card-tag tag-truck">🚚 ${truckSlots[p.truckIdx].plate}</span>` : ''}
+                    <span style="background:var(--dark); color:white; padding:2px 6px; border-radius:4px; font-size:12px;">${p.loc}</span>
                 </div>
                 <div style="font-weight:bold; font-size:15px; color:#333;">${p.name}</div>
-                <div style="font-size:12px; color:#666; margin-top:4px;">品號: ${p.item} | 效期: ${p.date}</div>
+                <div style="font-size:11px; color:#666; margin-top:3px;">品號: ${p.item} | 效期: ${p.date}</div>
                 
-                <!-- 預先清點區 -->
                 <div class="qty-row">
                     <button class="qty-btn" onclick="updateQty(${p.id}, -1)" ${p.locked ? 'disabled' : ''}>-</button>
                     <div class="qty-val">${p.act}</div>
                     <button class="qty-btn" onclick="updateQty(${p.id}, 1)" ${p.locked ? 'disabled' : ''}>+</button>
                 </div>
 
-                <!-- 操作按鈕 -->
                 ${!p.locked ? 
-                    `<button class="btn btn-assign" style="background:var(--pool)" onclick="preCount(${p.id})">確認清點並入池</button>` : 
-                    (isOnThisTruck ? 
-                        `<button class="btn btn-assign" style="background:#666" onclick="unload(${p.id})">從車上移回池中</button>` : 
-                        `<button class="btn btn-assign" onclick="assignTruck(${p.id})">指派給當前車輛裝車</button>
-                         <button class="btn btn-assign" style="background:#666; font-size:12px; padding:8px;" onclick="unlock(${p.id})">重啟清點(解鎖)</button>`
+                    `<button class="btn btn-load" onclick="lockItem(${p.id})">確認清點上車</button>` : 
+                    (isOnCurrentTruck ? 
+                        `<button class="btn" style="background:#666; color:white;" onclick="unassign(${p.id})">從此車移回待分派</button>` : 
+                        (isOnTruck ? 
+                            `<div style="font-size:12px; color:var(--success); text-align:center; margin-top:10px;">已裝載於其他車次</div>` :
+                            `<button class="btn btn-assign" onclick="assignToCurrentTruck(${p.id})">指派給當前車位裝車</button>
+                             <button class="btn" style="background:none; color:#999; font-size:11px; margin-top:5px; border:none;" onclick="unlockItem(${p.id})">重啟清點(解鎖)</button>`
+                        )
                     )
                 }
                 <input type="text" class="input-box" style="margin-top:10px; height:32px; font-size:12px;" placeholder="備註..." value="${p.note}" onchange="updateNote(${p.id}, this.value)">
             `;
             container.appendChild(div);
         });
-
-        // 更新進度條
-        const fill = document.getElementById('capacity-fill');
-        const text = document.getElementById('capacity-text');
-        fill.style.width = (currentLoad / 14 * 100) + '%';
-        text.innerText = `${currentLoad} / 14`;
-        currentLoad >= 14 ? fill.classList.add('full') : fill.classList.remove('full');
     }
 
-    // 第一階段：入池清點
-    function preCount(id) {
-        products.find(p => p.id === id).locked = true;
-        render();
+    function editTruck(idx) {
+        activeSlotIndex = idx;
+        const slot = truckSlots[idx];
+        document.getElementById('modalTitle').innerText = `編輯車位 ${idx+1} 資訊`;
+        document.getElementById('truckPlate').value = slot.plate;
+        document.getElementById('truckSeq').value = slot.seq;
+        openModal('truckModal');
     }
 
-    function unlock(id) {
-        products.find(p => p.id === id).locked = false;
-        render();
-    }
-
-    // 第二階段：裝車指派
-    function assignTruck(id) {
-        if(!currentTruck.id) { alert("請先設定車輛資訊！"); openModal('truckModal'); return; }
-        
-        // 檢查車輛容量
-        const currentLoad = products.filter(p => p.car === currentTruck.id && p.seq == currentTruck.seq).length;
-        if(currentLoad >= 14) { alert("這趟車已經裝滿 14 板了！請換下一趟。"); return; }
-
-        products.find(p => p.id === id).car = currentTruck.id;
-        products.find(p => p.id === id).seq = currentTruck.seq;
-        render();
-    }
-
-    function unload(id) {
-        products.find(p => p.id === id).car = "";
-        products.find(p => p.id === id).seq = "";
-        render();
-    }
-
-    // 車輛管理
-    function setTruck() {
-        const id = document.getElementById('truckId').value;
+    function saveTruckInfo() {
+        const plate = document.getElementById('truckPlate').value.toUpperCase();
         const seq = document.getElementById('truckSeq').value;
-        if(!id || !seq) { alert("請填入完整車牌與車次"); return; }
-        currentTruck = { id: id.toUpperCase(), seq: seq };
-        document.getElementById('truck-title').innerText = `🚚 ${currentTruck.id} (第 ${currentTruck.seq} 趟)`;
-        closeModal('truckModal');
+        if (!plate) { alert("請輸入車牌"); return; }
+        truckSlots[activeSlotIndex].plate = plate;
+        truckSlots[activeSlotIndex].seq = seq;
+        closeModal();
         render();
     }
 
+    function lockItem(id) { products.find(p => p.id === id).locked = true; render(); }
+    function unlockItem(id) { products.find(p => p.id === id).locked = false; render(); }
+    function toggleLock(id) { const p = products.find(i => i.id === id); if(!p.locked) lockItem(id); else if(p.truckIdx === activeSlotIndex) unassign(id); else unlockItem(id); }
+    
+    function assignToCurrentTruck(id) {
+        if (!truckSlots[activeSlotIndex].plate) { alert("請先設定車牌！"); editTruck(activeSlotIndex); return; }
+        if (products.filter(p => p.truckIdx === activeSlotIndex).length >= 14) { alert("此車已裝滿 14 板！"); return; }
+        products.find(p => p.id === id).truckIdx = activeSlotIndex;
+        render();
+    }
+
+    function unassign(id) { products.find(p => p.id === id).truckIdx = -1; render(); }
     function updateQty(id, d) { products.find(p=>p.id===id).act += d; render(); }
     function updateNote(id, v) { products.find(p=>p.id===id).note = v; }
     function openModal(id) { document.getElementById(id).style.display='flex'; }
-    function closeModal(id) { document.getElementById(id).style.display='none'; }
+    function closeModal() { document.getElementById('truckModal').style.display='none'; }
 
     function exportExcel() {
-        const rows = [["作業日期", "裝載車牌", "車次趟序", "儲位", "品號", "品名規格", "有效日期", "系統數", "實裝數", "差異", "作業狀態", "備註"]];
+        const rows = [["作業日期", "車牌號碼", "車次趟序", "儲位", "品號", "品名規格", "有效日期", "系統數", "實裝數", "差異", "狀態", "備註"]];
         products.forEach(p => {
-            let status = p.car ? `已裝車(${p.car})` : (p.locked ? "池化清點完畢" : "未清點");
-            rows.push([dateStr, p.car, p.seq, p.loc, p.item, p.name, p.date, p.sys, p.act, p.act - p.sys, status, p.note]);
+            const truck = p.truckIdx !== -1 ? truckSlots[p.truckIdx] : null;
+            let status = truck ? `已裝車(${truck.plate})` : (p.locked ? "已清點上車" : "待處理");
+            rows.push([dateStr, truck?truck.plate:"", truck?truck.seq:"", p.loc, p.item, p.name, p.date, p.sys, p.act, p.act-p.sys, status, p.note]);
         });
         const ws = XLSX.utils.aoa_to_sheet(rows);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "移倉總表");
         XLSX.writeFile(wb, `${dateStr}_移倉.xlsx`);
     }
-
     render();
 </script>
 </body>
