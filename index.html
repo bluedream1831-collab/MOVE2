@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>移倉系統 Pro V12 - 效期查核專家</title>
+    <title>移倉系統 V13 - 實數板位精確版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        :root { --beef: #d63031; --pork: #fd79a8; --cake: #fdcb6e; --chicken: #55efc4; --dark: #2d3436; --primary: #0984e3; --load: #6c5ce7; --done: #00b894; }
-        body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; background: #f1f2f6; margin: 0; padding-bottom: 220px; }
+        :root { --beef: #d63031; --pork: #fd79a8; --lamb: #e17055; --cake: #fdcb6e; --chicken: #55efc4; --dark: #2d3436; --primary: #0984e3; --load: #6c5ce7; --done: #00b894; }
+        body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; background: #dfe6e9; margin: 0; padding-bottom: 220px; }
         
-        /* 頂部進度與車次 */
+        /* 頂部看板 */
         .header { background: var(--dark); padding: 10px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .truck-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
         .truck-slot { background: #636e72; border-radius: 4px; padding: 6px; color: #fff; text-align: center; font-size: 11px; border: 2px solid transparent; }
@@ -34,13 +34,11 @@
         .item-name { font-weight: bold; font-size: 15px; color: #333; margin: 8px 0; }
         .exp-tag { color: var(--primary); font-weight: bold; font-family: monospace; }
 
-        /* 數量與動作 */
         .action-row { display: flex; align-items: center; gap: 8px; margin: 12px 0; }
         .qty-btn { width: 45px; height: 45px; background: white; border: 1px solid #ddd; border-radius: 6px; font-size: 20px; font-weight: bold; }
         .qty-val { width: 45px; text-align: center; font-size: 24px; font-weight: bold; }
         .btn-confirm { flex: 1; height: 45px; border-radius: 6px; border: none; font-weight: bold; color: white; cursor: pointer; }
 
-        /* 異常與備註 */
         .error-options { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 10px; }
         .err-chk { display: flex; align-items: center; font-size: 11px; font-weight: bold; color: #666; border: 1px solid #eee; padding: 4px; border-radius: 4px; }
         .err-chk input { margin-right: 3px; }
@@ -49,19 +47,16 @@
         .remark-box { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; box-sizing: border-box; }
         .remark-box.highlight { border: 2px solid var(--beef); background: white; }
 
-        /* 底部 */
         .footer { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 12px; box-shadow: 0 -4px 10px rgba(0,0,0,0.1); z-index: 101; }
         .btn-footer { padding: 14px; border-radius: 8px; border: none; font-size: 14px; font-weight: bold; color: white; cursor: pointer; }
-        
         .reset-btn { background: none; border: 1px solid #999; color: #999; font-size: 10px; padding: 3px 10px; border-radius: 4px; display: block; margin: 15px auto; }
 
-        /* PDF 列印 */
         #print-area { display: none; }
         @media print {
             .no-print, .header, .filter-tools, .footer, .reset-btn { display: none !important; }
-            #print-area { display: block !important; padding: 10px; font-size: 11px; }
+            #print-area { display: block !important; padding: 10px; font-size: 10px; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { border: 1px solid black; padding: 5px; text-align: left; }
+            th, td { border: 1px solid black; padding: 4px; text-align: left; }
             th { background: #eee !important; }
         }
     </style>
@@ -70,7 +65,7 @@
 
 <div class="header no-print">
     <div style="color:white; font-size:11px; display:flex; justify-content:space-between; margin-bottom:5px;">
-        <span>移倉進度 (<span id="total-stat">0/84</span>)</span>
+        <span>實際移倉進度 (<span id="total-stat">0/28</span> 板)</span>
         <span id="date-label"></span>
     </div>
     <div class="progress-container"><div id="main-progress" class="progress-bar"></div></div>
@@ -78,12 +73,12 @@
 </div>
 
 <div class="filter-tools no-print">
-    <input type="text" id="search" class="search-bar" placeholder="🔍 輸入效期、品號或名稱核對..." onkeyup="render()">
+    <input type="text" id="search" class="search-bar" placeholder="🔍 品號末4碼、儲位或效期核對..." onkeyup="render()">
     <div class="toggle-row">
         <div id="catTabs" style="display:flex; gap:5px; overflow-x:auto;">
-            <button class="cat-btn" style="padding:4px 10px; border-radius:10px; border:1px solid #ddd;" onclick="setCat('ALL')">全部</button>
-            <button class="cat-btn" style="padding:4px 10px; border-radius:10px; border:1px solid #ddd;" onclick="setCat('牛')">牛</button>
-            <button class="cat-btn" style="padding:4px 10px; border-radius:10px; border:1px solid #ddd;" onclick="setCat('豬')">豬</button>
+            <button class="cat-btn" style="padding:4px 10px; border-radius:10px; border:1px solid #ddd;" onclick="setCat('ALL')">全部待辦</button>
+            <button class="cat-btn" style="padding:4px 10px; border-radius:10px; border:1px solid #ddd;" onclick="setCat('牛')">牛類</button>
+            <button class="cat-btn" style="padding:4px 10px; border-radius:10px; border:1px solid #ddd;" onclick="setCat('蛋糕')">蛋糕</button>
         </div>
         <label style="font-size:12px; font-weight:bold;">
             隱藏已完成 <input type="checkbox" id="hideDone" onchange="render()">
@@ -93,28 +88,29 @@
 
 <div class="list-container no-print" id="cardList"></div>
 
-<button class="reset-btn no-print" onclick="resetSystem()">⚠️ 重置今日數據</button>
+<button class="reset-btn no-print" onclick="resetSystem()">⚠️ 重置數據</button>
 
 <div class="footer no-print">
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-        <button class="btn-footer" style="background:#e67e22;" onclick="window.print()">📄 產生 PDF/圖檔</button>
+        <button class="btn-footer" style="background:#e67e22;" onclick="window.print()">📄 產生報表</button>
         <button class="btn-footer" style="background:#28a745;" onclick="exportExcel()">📊 匯出 Excel</button>
     </div>
 </div>
 
-<!-- PDF 列印預覽 -->
+<!-- PDF 報表 -->
 <div id="print-area">
-    <h2 style="text-align:center;">移倉裝車核對報表</h2>
+    <h2 style="text-align:center;">移倉裝車核對報表 (實數精確版)</h2>
     <div id="p-info" style="display:flex; justify-content:space-between; margin-bottom:10px;"></div>
     <table>
         <thead>
             <tr>
-                <th style="width:8%">車牌</th>
+                <th style="width:10%">車牌</th>
                 <th style="width:10%">品號</th>
-                <th style="width:35%">品名規格</th>
-                <th style="width:12%">應有效期</th>
+                <th style="width:30%">品名規格</th>
+                <th style="width:12%">有效日期</th>
+                <th style="width:5%">預</th>
                 <th style="width:5%">實</th>
-                <th style="width:30%">狀態/正確效期備註</th>
+                <th style="width:28%">異常狀態/正確效期備註</th>
             </tr>
         </thead>
         <tbody id="print-tbody"></tbody>
@@ -122,12 +118,36 @@
 </div>
 
 <script>
-    // 預設資料 (範例)
-    const rawData = [
+    // 完整導入圖片中的 28 筆實數資料
+    const rawPalletData = [
         {loc:"1C2903", item:"24601003001", name:"冷凍美國CR安格斯牛五花火鍋片袋裝500G", sys:30, date:"20261222"},
+        {loc:"1C2904", item:"24601003001", name:"冷凍美國CR安格斯牛五花火鍋片袋裝500G", sys:30, date:"20261222"},
+        {loc:"1C3001", item:"24601003001", name:"冷凍美國CR安格斯牛五花火鍋片袋裝500G", sys:30, date:"20261222"},
+        {loc:"1C3303", item:"24200002001", name:"威保 - 冷凍紐西蘭 - 全羊火鍋肉片1KG", sys:30, date:"20270202"},
         {loc:"3B0301", item:"24600105001", name:"立大冷凍豬五花火鍋肉片1000G", sys:50, date:"20270130"},
+        {loc:"3B0501", item:"23904988001", name:"立基 - 冷凍9吋 油酥厚餅", sys:28, date:"20270128"},
+        {loc:"3B0902", item:"23904988001", name:"立基 - 冷凍9吋 油酥厚餅", sys:28, date:"20270302"},
+        {loc:"3B1301", item:"24200074001", name:"舍利蓮冷凍紐西蘭小羔羊梅花肉片500G", sys:49, date:"20270131"},
+        {loc:"3B1401", item:"24600005001", name:"思牧 - 冷凍豬五花火鍋片500G(袋裝)", sys:35, date:"20270210"},
         {loc:"3B3901", item:"23904009001", name:"泉泓起酥蛋糕(家庭號)", sys:23, date:"20260901"},
-        {loc:"4B1802", item:"24920267001", name:"威保 - 美國冷凍去骨腿排", sys:42, date:"20270202"}
+        {loc:"3B3902", item:"23904009001", name:"泉泓起酥蛋糕(家庭號)", sys:24, date:"20260901"},
+        {loc:"3B3903", item:"23904009001", name:"泉泓起酥蛋糕(家庭號)", sys:24, date:"20260901"},
+        {loc:"3B4102", item:"24601107001", name:"美國CR安格斯牛 五花火鍋片1000G", sys:32, date:"20261218"},
+        {loc:"3B4702", item:"23904125001", name:"泉泓冷凍蜂蜜蛋糕", sys:28, date:"20260902"},
+        {loc:"3B4703", item:"23904125001", name:"泉泓冷凍蜂蜜蛋糕", sys:28, date:"20260902"},
+        {loc:"3B4801", item:"23904040001", name:"泉泓起酥蛋糕", sys:28, date:"20260903"},
+        {loc:"3B4802", item:"23904040001", name:"泉泓起酥蛋糕", sys:28, date:"20260903"},
+        {loc:"3B4803", item:"23904040001", name:"泉泓起酥蛋糕", sys:28, date:"20260903"},
+        {loc:"3B4901", item:"23904009001", name:"泉泓起酥蛋糕(家庭號)", sys:24, date:"20260823"},
+        {loc:"3B4903", item:"23904009001", name:"泉泓起酥蛋糕(家庭號)", sys:24, date:"20260823"},
+        {loc:"3F1402", item:"23904009001", name:"泉泓起酥蛋糕(家庭號)", sys:24, date:"20260824"},
+        {loc:"3F1403", item:"23904009001", name:"泉泓起酥蛋糕(家庭號)", sys:24, date:"20260824"},
+        {loc:"4B0701", item:"24601108001", name:"舍利蓮冷凍澳洲穀飼 - 牛雪花肉片500G", sys:49, date:"20270131"},
+        {loc:"4B0702", item:"24601108001", name:"舍利蓮冷凍澳洲穀飼 - 牛雪花肉片500G", sys:49, date:"20270131"},
+        {loc:"4B1102", item:"24200074001", name:"舍利蓮冷凍紐西蘭小羔羊梅花肉片500G", sys:49, date:"20270131"},
+        {loc:"4B1401", item:"24600001001", name:"思牧 - 冷凍豬梅花火鍋片500G(袋裝)", sys:35, date:"20270210"},
+        {loc:"4B1802", item:"24920267001", name:"威保 - 美國冷凍去骨腿排", sys:42, date:"20270202"},
+        {loc:"4B1803", item:"24920267001", name:"威保 - 美國冷凍去骨腿排", sys:42, date:"20270202"}
     ];
 
     let products = [];
@@ -136,26 +156,22 @@
     let curCat = 'ALL';
 
     function init() {
-        const saved = localStorage.getItem('warehouse_v12_final');
+        const saved = localStorage.getItem('warehouse_actual_v13');
         if (saved) {
             const state = JSON.parse(saved);
             products = state.products;
             truckSlots = state.truckSlots;
             activeIdx = state.activeIdx || 0;
         } else {
-            // 模擬生成 84 筆
-            let data = [];
-            for(let i=0; i<21; i++) {
-                rawData.forEach((p, idx) => {
-                    data.push({...p, id: i*4 + idx, act: p.sys, locked: false, truckIdx: -1, abImg: false, abExp: false, abMix: false, note: ""});
-                });
-            }
-            products = data;
+            products = rawPalletData.map((p, i) => ({ 
+                ...p, id: i, act: p.sys, locked: false, truckIdx: -1, 
+                abImg: false, abExp: false, abMix: false, note: "" 
+            }));
         }
         render();
     }
 
-    function autoSave() { localStorage.setItem('warehouse_v12_final', JSON.stringify({ products, truckSlots, activeIdx })); }
+    function autoSave() { localStorage.setItem('warehouse_actual_v13', JSON.stringify({ products, truckSlots, activeIdx })); }
     function setCat(c) { curCat = c; render(); }
 
     function render() {
@@ -167,14 +183,14 @@
         document.getElementById('main-progress').style.width = (doneCount / products.length * 100) + '%';
         document.getElementById('date-label').innerText = new Date().toISOString().slice(0,10);
 
-        // 渲染車次看板
+        // 渲染車次
         const grid = document.getElementById('truckGrid');
         grid.innerHTML = "";
         truckSlots.forEach((slot, idx) => {
             const count = products.filter(p => p.truckIdx === idx).length;
             const div = document.createElement('div');
             div.className = `truck-slot ${activeIdx === idx ? 'active' : ''} ${count >= 14 ? 'full' : ''}`;
-            div.innerHTML = `<b>${slot.plate || `第${slot.seq}趟`}</b><br>${count}/14`;
+            div.innerHTML = `<b>${slot.plate || `車次 ${slot.seq}`}</b><br>${count}/14`;
             div.onclick = () => {
                 if(activeIdx === idx || !slot.plate) {
                     const p = prompt("設定車牌", slot.plate);
@@ -185,13 +201,13 @@
             grid.appendChild(div);
         });
 
-        // 渲染卡片
+        // 渲染列表
         const container = document.getElementById('cardList');
         container.innerHTML = "";
 
         products.filter(p => {
             const matchCat = curCat === 'ALL' || p.name.includes(curCat);
-            const matchSearch = p.item.includes(key) || p.name.includes(key) || p.date.includes(key);
+            const matchSearch = p.item.includes(key) || p.name.includes(key) || p.date.includes(key) || p.loc.includes(key);
             const matchFilter = hideDone ? !p.locked : true;
             const visible = p.truckIdx === -1 || p.truckIdx === activeIdx;
             return matchCat && matchSearch && matchFilter && visible;
@@ -202,12 +218,12 @@
             
             div.innerHTML = `
                 <div class="item-header">
-                    <span>品號: ${p.item}</span><span class="exp-tag">預計效期: ${p.date}</span>
+                    <span>${p.loc} | 品號: ${p.item}</span><span class="exp-tag">應有效期: ${p.date}</span>
                 </div>
                 <div class="item-name">${p.name}</div>
                 
-                <div class="qty-control">
-                    <div class="qty-row" style="display:flex; align-items:center; flex:1;">
+                <div class="action-row">
+                    <div style="display:flex; align-items:center; flex:1;">
                         <button class="qty-btn" onclick="updateQty(${p.id},-1)" ${p.locked?'disabled':''}>-</button>
                         <div class="qty-val">${p.act}</div>
                         <button class="qty-btn" onclick="updateQty(${p.id},1)" ${p.locked?'disabled':''}>+</button>
@@ -215,8 +231,8 @@
                     ${!p.locked ? 
                         `<button class="btn-confirm" style="background:var(--load);" onclick="lock(${p.id})">確認清點</button>` :
                         (p.truckIdx === activeIdx ? 
-                            `<button class="btn-confirm" style="background:#636e72;" onclick="unload(${p.id})">✅ 已裝載</button>` :
-                            `<button class="btn-confirm" style="background:var(--primary);" onclick="assign(${p.id})">指派裝車</button>`
+                            `<button class="btn-confirm" style="background:#636e72;" onclick="unload(${p.id})">✅ 卸車</button>` :
+                            `<button class="btn-confirm" style="background:var(--primary);" onclick="assign(${p.id})">指派上車</button>`
                         )
                     }
                 </div>
@@ -228,10 +244,10 @@
                 </div>
 
                 <input type="text" class="remark-box ${(p.abExp||p.abMix)?'highlight':''}" 
-                    placeholder="${(p.abExp||p.abMix)?'⚠️ 請輸入正確效期日期...':'備註說明...'}" 
+                    placeholder="${(p.abExp||p.abMix)?'⚠️ 請務必輸入正確日期...':'其他備註...'}" 
                     value="${p.note}" onchange="setNote(${p.id},this.value)" ${p.locked?'disabled':''}>
                 
-                ${p.locked ? `<small style="display:block; text-align:right; color:#999; margin-top:8px;" onclick="unlock(${p.id})">解鎖編輯</small>` : ''}
+                ${p.locked ? `<small style="display:block; text-align:right; color:#999; margin-top:10px;" onclick="unlock(${p.id})">解鎖編輯</small>` : ''}
             `;
             container.appendChild(div);
         });
@@ -243,18 +259,18 @@
     function lock(id) { products.find(i=>i.id===id).locked=true; render(); autoSave(); }
     function unlock(id) { products.find(i=>i.id===id).locked=false; render(); autoSave(); }
     function assign(id) {
-        if(!truckSlots[activeIdx].plate) return alert("請先設定車牌");
-        if(products.filter(p=>p.truckIdx===activeIdx).length>=14) return alert("載重已滿");
+        if(!truckSlots[activeIdx].plate) return alert("請先點擊頂部方塊設定車牌");
+        if(products.filter(p=>p.truckIdx===activeIdx).length>=14) return alert("載重已達 14 板上限");
         products.find(i=>i.id===id).truckIdx=activeIdx; render(); autoSave();
     }
     function unload(id) { products.find(i=>i.id===id).truckIdx=-1; render(); autoSave(); }
     function resetSystem() { if(confirm("確定清除數據重來？")) { localStorage.clear(); location.reload(); } }
 
-    function getStatus(p) {
+    function getStatusText(p) {
         let res = [];
         if(p.abImg) res.push("外觀損壞");
         if(p.abExp) res.push("效期錯誤");
-        if(p.abMix) res.push("混不同效期");
+        if(p.abMix) res.push("混合效期");
         if(p.note) res.push(p.note);
         return res.length > 0 ? res.join(" / ") : "完成";
     }
@@ -263,7 +279,7 @@
         const rows = [["日期", "車牌", "品號", "品名", "應有效期", "預設數", "實裝數", "狀態備註"]];
         products.forEach(p => {
             const t = p.truckIdx !== -1 ? truckSlots[p.truckIdx].plate : "";
-            rows.push([new Date().toLocaleDateString(), t, p.item, p.name, p.date, p.sys, p.act, getStatus(p)]);
+            rows.push([new Date().toLocaleDateString(), t, p.item, p.name, p.date, p.sys, p.act, getStatusText(p)]);
         });
         const ws = XLSX.utils.aoa_to_sheet(rows);
         const wb = XLSX.utils.book_new();
@@ -277,7 +293,7 @@
         tbody.innerHTML = "";
         products.forEach(p => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${p.truckIdx!==-1?truckSlots[p.truckIdx].plate:'--'}</td><td>${p.item}</td><td>${p.name}</td><td>${p.date}</td><td>${p.act}</td><td>${getStatus(p)}</td>`;
+            tr.innerHTML = `<td>${p.truckIdx!==-1?truckSlots[p.truckIdx].plate:'--'}</td><td>${p.item}</td><td>${p.name}</td><td>${p.date}</td><td>${p.sys}</td><td>${p.act}</td><td>${getStatusText(p)}</td>`;
             tbody.appendChild(tr);
         });
     };
