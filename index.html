@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>大戶投零股計算-先收後退版</title>
+    <title>大戶投零股計算-終極版</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#556b2f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --bg: #f3f4ed; --green: #556b2f; --red: #c66b6b; --low-green: #5a835a; }
@@ -12,53 +15,84 @@
         input { background: #f9f9f7 !important; border: 1px solid #e2e2da !important; border-radius: 0.75rem !important; padding: 0.75rem !important; font-size: 16px !important; width: 100%; }
         .btn-green { background-color: var(--green); color: white; transition: all 0.2s; }
         .btn-green:active { transform: scale(0.96); opacity: 0.9; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #f0f0eb; font-size: 11px; }
         .info-badge { background: #eff2e6; color: #556b2f; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: bold; }
     </style>
 </head>
 <body class="p-4 pb-12">
     <div class="max-w-md mx-auto space-y-4">
         
+        <!-- 標題與標籤 -->
         <header class="text-center py-2">
-            <h1 class="text-2xl font-black" style="color: var(--green);">大戶投零股試算</h1>
+            <h1 class="text-2xl font-black" style="color: var(--green);">大戶投零股計算機</h1>
             <div class="flex justify-center gap-2 mt-1">
-                <span class="info-badge">手續費 2 折</span>
-                <span class="info-badge">最低 1 元</span>
+                <span class="info-badge">2折/最低1元</span>
                 <span class="info-badge">先收後退</span>
             </div>
         </header>
 
-        <!-- 1. 交易心法與退費說明 -->
-        <section class="card p-4 space-y-2 bg-[#fdfdfa]">
-            <h2 class="text-xs font-black flex items-center" style="color: var(--green);">
-                <span class="mr-1">📢</span> 重要規則提醒
+        <!-- 1. 零股交易時間表 (保留) -->
+        <section class="card p-4">
+            <h2 class="text-xs font-bold mb-3 flex items-center" style="color: var(--green);">
+                <span class="mr-2">⏰</span> 零股交易時間 (最新 5 秒制)
             </h2>
-            <ul class="text-[11px] space-y-1.5 text-gray-600 leading-relaxed">
-                <li>• <b class="text-gray-800">退費機制：</b>交割日先扣「原始費率」，折扣金額於<span class="text-red-600 font-bold">次月 15 日</span>退回。</li>
-                <li>• <b class="text-gray-800">100萬限制：</b>電子交易每月 100 萬內享 2 折優惠。</li>
-                <li>• <b class="text-gray-800">心法：</b>單筆建議 > 3,000 元，使 1 元低消成本佔比低於 0.05%。</li>
+            <table class="w-full text-gray-600">
+                <thead>
+                    <tr class="text-gray-400">
+                        <th>類別</th>
+                        <th>委託時間</th>
+                        <th>撮合規則</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="font-bold text-gray-800">盤中零股</td>
+                        <td>09:00-13:30</td>
+                        <td>09:10起每 <span class="text-red-500 font-bold">5秒</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-gray-800">盤後零股</td>
+                        <td>13:40-14:30</td>
+                        <td>14:30 一次性撮合</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- 2. 交易心法備註 (保留並強調) -->
+        <section class="card p-5 border-l-4" style="border-left-color: var(--green); background: #fdfdfa;">
+            <h2 class="text-xs font-black mb-3 flex items-center" style="color: var(--green);">
+                <span class="mr-1">💡</span> 零股價差交易心法
+            </h2>
+            <ul class="text-[11px] space-y-3 text-gray-600 leading-relaxed">
+                <li><b class="text-gray-800">● 金額效益：</b>單筆建議大於 <span class="underline">3,000 ~ 5,000 元</span>。手續費 1 元優勢能極大化，讓成本佔比降至最低。</li>
+                <li><b class="text-gray-800">● 選股目標：</b>鎖定「高價績優股」。零股最適合操作百元以上標的，避免操作 10 元低價股，防止稅費吃光獲利。</li>
+                <li><b class="text-gray-800">● 核心目的：</b>本本金小時以練習技術為主。等勝率穩定並累積本金後，獲利的金額才有意義。</li>
             </ul>
         </section>
 
-        <!-- 2. 輸入區 -->
+        <!-- 3. 輸入區：支援多筆買入 -->
         <section class="card p-5 space-y-4">
+            <h3 class="text-[10px] font-bold text-gray-400 uppercase mb-2">買入紀錄 (可分批輸入)</h3>
             <div id="buy-rows" class="space-y-3">
                 <div class="grid grid-cols-5 gap-2 buy-row">
                     <input type="number" placeholder="買價" class="col-span-3 buy-price" step="0.01" inputmode="decimal">
                     <input type="number" placeholder="股數" class="col-span-2 buy-shares" inputmode="numeric">
                 </div>
             </div>
-            
+            <button onclick="addRow()" class="w-full py-2 border border-dashed border-gray-300 rounded-lg text-[11px] text-gray-400 font-bold">+ 新增買入筆數</button>
+
             <div class="pt-2 border-t border-gray-50">
                 <label class="text-[10px] font-bold text-gray-400 block mb-1">預計賣出價</label>
-                <input type="number" id="sellPrice" step="0.01" inputmode="decimal" placeholder="輸入預計賣價">
+                <input type="number" id="sellPrice" step="0.01" inputmode="decimal" placeholder="0.0">
             </div>
 
             <button onclick="calculate()" class="w-full py-4 btn-green rounded-2xl shadow-lg font-bold text-lg">
-                開始計算
+                開始試算
             </button>
         </section>
 
-        <!-- 3. 結果分析區 -->
+        <!-- 4. 結果分析區 -->
         <div id="resArea" class="hidden space-y-4 animate-in slide-in-from-bottom-5">
             <!-- 損益與保本 -->
             <div class="card p-6 border-t-4" style="border-top-color: var(--green);">
@@ -68,24 +102,24 @@
                     <p id="roi" class="text-sm font-bold mt-2"></p>
                 </div>
                 
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="text-center border-r border-gray-50">
-                        <p class="text-[10px] text-gray-400 uppercase">平均成本 (1元計)</p>
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div class="border-r border-gray-50">
+                        <p class="text-[10px] text-gray-400">平均成本 (實收1元計)</p>
                         <h4 class="text-lg font-bold" id="avgCostDisplay"></h4>
                     </div>
-                    <div class="text-center">
-                        <p class="text-[10px] text-gray-400 uppercase">保本售價 (含稅費)</p>
+                    <div>
+                        <p class="text-[10px] text-gray-400">保本售價 (含稅費)</p>
                         <h4 class="text-lg font-bold text-orange-600" id="bePriceDisplay"></h4>
                     </div>
                 </div>
             </div>
 
-            <!-- 現金流與退費明細 -->
+            <!-- 現金流細節 -->
             <div class="card p-5 space-y-3">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">現金流與退費預估</h3>
+                <h3 class="text-xs font-bold text-gray-400 uppercase">大戶投帳務明細 (先收後退)</h3>
                 <div class="space-y-2 text-xs">
                     <div class="flex justify-between">
-                        <span class="text-gray-500">T+2 交割應付 (先收):</span>
+                        <span class="text-gray-500">T+2 交割預計扣款:</span>
                         <span id="cashOut" class="font-bold text-red-500"></span>
                     </div>
                     <div class="flex justify-between">
@@ -101,73 +135,94 @@
                         <span id="taxDetail" class="text-gray-800"></span>
                     </div>
                 </div>
-                <p class="text-[9px] text-gray-400 italic text-center mt-2">* 原始低消以 20 元試算，實際扣款依券商公告為準</p>
+                <p class="text-[9px] text-gray-400 italic text-center mt-2">* 系統以原始低消 20 元預估扣款現金流</p>
             </div>
         </div>
 
-        <footer class="text-center text-[10px] text-gray-300 py-4">
-            交易時間：盤中 09:00-13:30 (5秒撮合) / 盤後 13:40-14:30<br>
+        <footer class="text-center text-[9px] text-gray-300 py-4">
+            手續費退費機制：次月 15 日自動入帳<br>
             本工具僅供參考，實際金額以券商對帳單為準
         </footer>
     </div>
 
     <script>
+        function addRow() {
+            const div = document.createElement('div');
+            div.className = 'grid grid-cols-5 gap-2 buy-row animate-in fade-in';
+            div.innerHTML = `
+                <input type="number" placeholder="買價" class="col-span-3 buy-price" step="0.01" inputmode="decimal">
+                <input type="number" placeholder="股數" class="col-span-2 buy-shares" inputmode="numeric">
+            `;
+            document.getElementById('buy-rows').appendChild(div);
+        }
+
         function calculate() {
-            const bp = parseFloat(document.querySelector('.buy-price').value);
-            const sh = parseInt(document.querySelector('.buy-shares').value);
             const sp = parseFloat(document.getElementById('sellPrice').value) || 0;
-            
-            if (!bp || !sh) return;
-
             const feeRate = 0.001425;
-            const discount = 0.2; // 永豐 2 折
+            const discount = 0.2; // 2折
 
-            // 1. 買入端
-            const buyBase = bp * sh;
-            // 原始手續費 (先收，低消通常20)
-            let buyFeeOriginal = Math.floor(buyBase * feeRate);
-            if (buyFeeOriginal < 20) buyFeeOriginal = 20; 
-            
-            // 優惠手續費 (實收，最低1)
-            let buyFeeFinal = Math.floor(buyBase * feeRate * discount);
-            if (buyFeeFinal < 1) buyFeeFinal = 1;
+            let totalBuyAmount = 0;
+            let totalShares = 0;
+            let totalBuyFeeOriginal = 0;
+            let totalBuyFeeFinal = 0;
 
-            // 2. 賣出端 (假設未來賣出)
-            let sellBase = sp * sh;
-            let sellFeeOriginal = Math.floor(sellBase * feeRate);
-            if (sellFeeOriginal < 20) sellFeeOriginal = 20;
+            const priceInputs = document.querySelectorAll('.buy-price');
+            const shareInputs = document.querySelectorAll('.buy-shares');
 
-            let sellFeeFinal = Math.floor(sellBase * feeRate * discount);
-            if (sellFeeFinal < 1) sellFeeFinal = 1;
+            priceInputs.forEach((el, i) => {
+                const p = parseFloat(el.value);
+                const s = parseInt(shareInputs[i].value);
+                if (p > 0 && s > 0) {
+                    const amount = p * s;
+                    // 先收 (低消20)
+                    let feeOrg = Math.floor(amount * feeRate);
+                    if (feeOrg < 20) feeOrg = 20;
+                    // 實收 (最低1)
+                    let feeFin = Math.floor(amount * feeRate * discount);
+                    if (feeFin < 1) feeFin = 1;
 
-            let tax = Math.floor(sellBase * 0.003);
+                    totalBuyAmount += amount;
+                    totalShares += s;
+                    totalBuyFeeOriginal += feeOrg;
+                    totalBuyFeeFinal += feeFin;
+                }
+            });
 
-            // 3. 計算結果
-            const initialCashOut = buyBase + buyFeeOriginal; // 交割當天扣的錢
-            const totalRefund = (buyFeeOriginal - buyFeeFinal) + (sellFeeOriginal - sellFeeFinal);
-            const actualTotalCost = buyBase + buyFeeFinal;
-            const actualNetRevenue = sellBase - sellFeeFinal - tax;
+            if (totalShares === 0) return;
+
+            // 賣出端計算
+            const sellAmount = sp * totalShares;
+            let sellFeeOrg = Math.floor(sellAmount * feeRate);
+            if (sellFeeOrg < 20) sellFeeOrg = 20;
+            let sellFeeFin = Math.floor(sellAmount * feeRate * discount);
+            if (sellFeeFin < 1) sellFeeFin = 1;
+            const tax = Math.floor(sellAmount * 0.3 / 100);
+
+            // 帳務彙整
+            const actualTotalCost = totalBuyAmount + totalBuyFeeFinal;
+            const actualNetRevenue = sellAmount - sellFeeFin - tax;
             const netProfit = actualNetRevenue - actualTotalCost;
             const roi = (netProfit / actualTotalCost) * 100;
+            const totalRefund = (totalBuyFeeOriginal - totalBuyFeeFinal) + (sellFeeOrg - sellFeeFin);
+            const initialCashOut = totalBuyAmount + totalBuyFeeOriginal;
 
-            // 保本價 (考慮退費後的 1 元低消與稅)
-            const bePrice = (actualTotalCost + 1) / (sh * (1 - 0.003));
+            // 保本點 (以實收成本計)
+            const bePrice = (actualTotalCost + 1) / (totalShares * (1 - 0.003));
 
-            // 更新 UI
+            // 更新介面
             document.getElementById('resArea').classList.remove('hidden');
-            document.getElementById('avgCostDisplay').innerText = (actualTotalCost / sh).toFixed(2);
+            document.getElementById('avgCostDisplay').innerText = (actualTotalCost / totalShares).toFixed(2);
             document.getElementById('bePriceDisplay').innerText = bePrice.toFixed(2);
             
             const pElem = document.getElementById('netProfit');
             pElem.innerText = (netProfit >= 0 ? "+" : "") + Math.round(netProfit).toLocaleString() + " 元";
             pElem.style.color = netProfit >= 0 ? 'var(--red)' : 'var(--low-green)';
-            
             document.getElementById('roi').innerText = `投資報酬率 ${roi.toFixed(2)}%`;
             document.getElementById('roi').style.color = netProfit >= 0 ? 'var(--red)' : 'var(--low-green)';
 
             document.getElementById('cashOut').innerText = Math.round(initialCashOut).toLocaleString() + " 元";
             document.getElementById('refundAmount').innerText = Math.round(totalRefund).toLocaleString() + " 元";
-            document.getElementById('finalFee').innerText = (buyFeeFinal + sellFeeFinal) + " 元";
+            document.getElementById('finalFee').innerText = (totalBuyFeeFinal + sellFeeFin) + " 元";
             document.getElementById('taxDetail').innerText = tax.toLocaleString() + " 元";
 
             window.scrollTo({ top: 500, behavior: 'smooth' });
