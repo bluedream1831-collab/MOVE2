@@ -3,88 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>永豐金零股計算器-專業版</title>
+    <title>永豐金零股計算器-終極版</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#556b2f">
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root {
-            --bg-eye-care: #f3f4ed; 
-            --accent-green: #556b2f; 
-            --soft-red: #c66b6b;   
-            --soft-green: #5a835a; 
-        }
-        body { 
-            background-color: var(--bg-eye-care); 
-            color: #333;
-            font-family: -apple-system, sans-serif;
-            -webkit-tap-highlight-color: transparent; 
-        }
-        .card { background: white; border-radius: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
-        input, select { background-color: #f9f9f7 !important; border: 1px solid #e2e2da !important; }
-        .btn-calc { background-color: var(--accent-green); }
-        .btn-calc:active { transform: scale(0.97); }
-        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; }
+        :root { --bg-eye: #f3f4ed; --green: #556b2f; --red: #c66b6b; --low-green: #5a835a; }
+        body { background-color: var(--bg-eye); color: #333; font-family: sans-serif; }
+        .card { background: white; border-radius: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        input, select { background: #f9f9f7 !important; border: 1px solid #e2e2da !important; border-radius: 0.75rem !important; padding: 0.75rem !important; }
     </style>
 </head>
-<body class="min-h-screen pb-10">
-    <div class="max-w-md mx-auto px-4 py-6">
-        
-        <!-- 標題 -->
-        <header class="text-center mb-6">
-            <h1 class="text-2xl font-bold" style="color: var(--accent-green);">永豐金零股損益計算</h1>
-            <p class="text-xs text-gray-400 mt-1">手續費最低 1 元 / 交易稅 0.3%</p>
+<body class="p-4">
+    <div class="max-w-md mx-auto">
+        <header class="text-center py-4">
+            <h1 class="text-xl font-bold" style="color: var(--green);">永豐金零股損益 (終極優化版)</h1>
         </header>
 
-        <!-- 1. 交易時間與規則 (新增區塊) -->
-        <section class="card p-5 mb-6">
-            <h2 class="text-sm font-bold mb-3 flex items-center" style="color: var(--accent-green);">
-                <span class="mr-2">⏰</span> 零股交易時間表
-            </h2>
-            <table class="w-full text-xs text-gray-600 mb-3">
-                <thead>
-                    <tr class="text-gray-400">
-                        <th>類別</th>
-                        <th>委託時間</th>
-                        <th>撮合方式</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="font-bold">盤中零股</td>
-                        <td>09:00 - 13:30</td>
-                        <td>09:10 起每 1 分鐘</td>
-                    </tr>
-                    <tr>
-                        <td class="font-bold">盤後零股</td>
-                        <td>13:40 - 14:30</td>
-                        <td>14:30 一次性撮合</td>
-                    </tr>
-                </tbody>
-            </table>
-            <div class="bg-gray-50 p-3 rounded-xl text-[11px] text-gray-500 leading-relaxed">
-                💡 <b>小提醒：</b> 永豐金零股手續費不滿 1 元以 1 元計收。目前零股<b>不可當沖</b>，交易稅固定為 0.3%。
+        <!-- 交易時間提醒 (可折疊) -->
+        <details class="mb-4 text-xs text-gray-500 card p-3">
+            <summary class="cursor-pointer font-bold">⏰ 零股交易時間 (點擊展開)</summary>
+            <div class="mt-2 space-y-1 border-t pt-2">
+                <p>● 盤中：09:00-13:30 (1分撮合)</p>
+                <p>● 盤後：13:40-14:30 (一次撮合)</p>
+                <p>● 交割：成交日後第 2 個工作天 (T+2)</p>
             </div>
-        </section>
+        </details>
 
-        <!-- 2. 輸入區塊 -->
-        <section class="card p-6 mb-6 space-y-4 border-t-4" style="border-top-color: var(--accent-green);">
-            <div class="grid grid-cols-2 gap-4">
+        <!-- 輸入區 -->
+        <div class="card p-5 mb-4 space-y-4">
+            <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-[11px] font-bold text-gray-400 mb-1 ml-1">買入單價</label>
-                    <input type="number" id="buyPrice" step="0.01" inputmode="decimal" class="w-full rounded-xl p-3 text-lg font-semibold focus:ring-2 focus:ring-green-100 outline-none" placeholder="0.0">
+                    <label class="text-xs font-bold text-gray-400">買入單價</label>
+                    <input type="number" id="buyPrice" step="0.01" inputmode="decimal" class="w-full text-lg font-bold" placeholder="0.0">
                 </div>
                 <div>
-                    <label class="block text-[11px] font-bold text-gray-400 mb-1 ml-1">成交股數</label>
-                    <input type="number" id="shares" inputmode="numeric" class="w-full rounded-xl p-3 text-lg font-semibold focus:ring-2 focus:ring-green-100 outline-none" placeholder="10">
+                    <label class="text-xs font-bold text-gray-400">成交股數</label>
+                    <input type="number" id="shares" inputmode="numeric" class="w-full text-lg font-bold" placeholder="10">
                 </div>
             </div>
-
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-[11px] font-bold text-gray-400 mb-1 ml-1">手續費折扣</label>
-                    <select id="discount" class="w-full rounded-xl p-3 font-medium outline-none">
+                    <label class="text-xs font-bold text-gray-400">手續費折扣</label>
+                    <select id="discount" class="w-full font-bold" onchange="savePrefs()">
                         <option value="2">2 折 (大戶投)</option>
                         <option value="1">1 折</option>
                         <option value="2.8">2.8 折</option>
@@ -92,121 +53,131 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-[11px] font-bold text-gray-400 mb-1 ml-1">賣出單價 (預估)</label>
-                    <input type="number" id="sellPrice" step="0.01" inputmode="decimal" class="w-full rounded-xl p-3 text-lg font-semibold focus:ring-2 focus:ring-green-100 outline-none" placeholder="0.0">
+                    <label class="text-xs font-bold text-gray-400">預計賣出價</label>
+                    <input type="number" id="sellPrice" step="0.01" inputmode="decimal" class="w-full text-lg font-bold">
                 </div>
             </div>
+            <button onclick="calculate()" class="w-full py-4 text-white font-bold rounded-xl shadow-lg" style="background: var(--green);">開始試算</button>
+        </div>
 
-            <button onclick="calculate()" class="w-full btn-calc text-white text-lg font-bold py-4 rounded-2xl shadow-lg mt-2">
-                開始計算
-            </button>
-        </section>
-
-        <!-- 3. 保本分析與結果 (合併顯示) -->
-        <div id="resultArea" class="hidden space-y-4 animate-in slide-in-from-bottom-5">
-            <!-- 保本價 -->
-            <div class="card p-5 border-l-4" style="border-left-color: var(--accent-green); background-color: #fdfdfa;">
-                <p class="text-[11px] text-gray-400 font-bold uppercase tracking-wider">保本獲利門檻</p>
-                <div class="flex justify-between items-end mt-1">
+        <!-- 結果分析 -->
+        <div id="res" class="hidden space-y-4">
+            <!-- 保本分析 -->
+            <div class="card p-5 border-l-4" style="border-left-color: var(--green);">
+                <h3 class="text-xs font-bold text-gray-400 mb-2 uppercase">保本點分析 (已考慮跳動單位)</h3>
+                <div class="flex justify-between items-end">
                     <div>
-                        <span class="text-2xl font-black" id="breakEvenPrice"></span>
-                        <span class="text-xs text-gray-500 ml-1">元以上賣出才賺</span>
+                        <span class="text-2xl font-black" id="bePrice"></span>
+                        <p class="text-[10px] text-gray-500" id="tickInfo"></p>
                     </div>
                     <div class="text-right">
-                        <span class="text-sm font-bold text-gray-700" id="breakEvenPercent"></span>
+                        <span class="text-sm font-bold" id="bePercent"></span>
+                        <p class="text-[10px] text-gray-500">需漲幅</p>
                     </div>
                 </div>
             </div>
 
-            <!-- 詳細損益 -->
-            <div class="card p-6">
+            <!-- 實際損益 -->
+            <div class="card p-5">
                 <div class="text-center border-b pb-4 mb-4">
-                    <p class="text-xs text-gray-400">預估淨損益</p>
+                    <p class="text-xs text-gray-400">預估淨利 (扣除所有成本)</p>
                     <h2 id="netProfit" class="text-4xl font-black mt-1"></h2>
                     <p id="roi" class="text-sm font-bold mt-1"></p>
                 </div>
-                <div class="space-y-2 text-[13px]">
-                    <div class="flex justify-between text-gray-500">
-                        <span>買入總成本</span>
-                        <span id="totalCost" class="text-gray-800 font-medium"></span>
-                    </div>
-                    <div class="flex justify-between text-gray-500">
-                        <span>買賣手續費</span>
-                        <span id="feesTotal" class="text-gray-800 font-medium"></span>
-                    </div>
-                    <div class="flex justify-between text-gray-500">
-                        <span>證券交易稅</span>
-                        <span id="taxDetail" class="text-gray-800 font-medium"></span>
-                    </div>
+                <div class="grid grid-cols-2 gap-y-2 text-xs text-gray-500">
+                    <span>買入總成本 (T+2 扣款):</span> <span id="c1" class="text-right text-gray-800"></span>
+                    <span>預估回收款 (T+2 入帳):</span> <span id="c2" class="text-right text-gray-800"></span>
+                    <span>總手續費 (永豐金最低1元):</span> <span id="c3" class="text-right text-blue-600"></span>
+                    <span>證券交易稅 (0.3%):</span> <span id="c4" class="text-right text-orange-600"></span>
                 </div>
             </div>
         </div>
+
+        <footer class="text-center py-6 text-[10px] text-gray-400">
+            本工具僅供參考，實際金額以券商帳單為準。
+        </footer>
     </div>
 
     <script>
-        function calculate() {
-            const buyPrice = parseFloat(document.getElementById('buyPrice').value);
-            const sellPrice = parseFloat(document.getElementById('sellPrice').value) || 0;
-            const shares = parseInt(document.getElementById('shares').value);
-            const discount = parseFloat(document.getElementById('discount').value) / 10;
-            
-            const taxRate = 0.003; 
-            const feeRate = 0.001425 * discount;
-
-            if (!buyPrice || !shares) {
-                alert("請輸入買入價格與股數");
-                return;
-            }
-
-            // 1. 買入計算
-            const buyAmount = buyPrice * shares;
-            let buyFee = Math.floor(buyAmount * feeRate);
-            if (buyFee < 1) buyFee = 1;
-            const totalCost = buyAmount + buyFee;
-
-            // 2. 保本價計算
-            let bePrice = totalCost / (shares * (1 - taxRate - feeRate));
-            if (Math.floor(bePrice * shares * feeRate) < 1) {
-                bePrice = (totalCost + 1) / (shares * (1 - taxRate));
-            }
-            
-            document.getElementById('resultArea').classList.remove('hidden');
-            document.getElementById('breakEvenPrice').innerText = bePrice.toFixed(2);
-            document.getElementById('breakEvenPercent').innerText = `+${(((bePrice - buyPrice) / buyPrice) * 100).toFixed(2)}%`;
-
-            // 3. 賣出損益計算
-            if (sellPrice > 0) {
-                const sellAmount = sellPrice * shares;
-                let sellFee = Math.floor(sellAmount * feeRate);
-                if (sellFee < 1) sellFee = 1;
-                const tax = Math.floor(sellAmount * taxRate);
-                
-                const totalRevenue = sellAmount - sellFee - tax;
-                const netProfit = totalRevenue - totalCost;
-                const roi = (netProfit / totalCost) * 100;
-
-                const profitElem = document.getElementById('netProfit');
-                profitElem.innerText = `${netProfit > 0 ? '+' : ''}${Math.round(netProfit).toLocaleString()} 元`;
-                profitElem.style.color = netProfit >= 0 ? 'var(--soft-red)' : 'var(--soft-green)';
-                
-                document.getElementById('roi').innerText = `報酬率 ${roi.toFixed(2)}%`;
-                document.getElementById('roi').style.color = roi >= 0 ? 'var(--soft-red)' : 'var(--soft-green)';
-
-                document.getElementById('totalCost').innerText = `${Math.round(totalCost).toLocaleString()} 元`;
-                document.getElementById('feesTotal').innerText = `${buyFee + sellFee} 元`;
-                document.getElementById('taxDetail').innerText = `${tax.toLocaleString()} 元`;
-            } else {
-                // 若沒輸入賣出價，隱藏詳細損益區塊，只看保本價
-                document.getElementById('netProfit').innerText = "--";
-                document.getElementById('roi').innerText = "請輸入預估賣出價";
-            }
-
-            window.scrollTo({ top: 400, behavior: 'smooth' });
+        // 台股跳動單位邏輯
+        function getTickSize(price) {
+            if (price < 10) return 0.01;
+            if (price < 50) return 0.05;
+            if (price < 100) return 0.1;
+            if (price < 500) return 0.5;
+            if (price < 1000) return 1.0;
+            return 5.0;
         }
 
-        // PWA
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+        // 自動儲存偏好
+        function savePrefs() {
+            localStorage.setItem('stock_discount', document.getElementById('discount').value);
+        }
+
+        // 載入偏好
+        window.onload = () => {
+            const d = localStorage.getItem('stock_discount');
+            if (d) document.getElementById('discount').value = d;
+        }
+
+        function calculate() {
+            const bp = parseFloat(document.getElementById('buyPrice').value);
+            const sp = parseFloat(document.getElementById('sellPrice').value) || 0;
+            const sh = parseInt(document.getElementById('shares').value);
+            const disc = parseFloat(document.getElementById('discount').value) / 10;
+
+            if (!bp || !sh) return;
+
+            // 1. 買入計算
+            let bFee = Math.floor(bp * sh * 0.001425 * disc);
+            if (bFee < 1) bFee = 1;
+            const totalCost = (bp * sh) + bFee;
+
+            // 2. 理論保本價
+            let rawBe = totalCost / (sh * (1 - 0.003 - (0.001425 * disc)));
+            if (Math.floor(rawBe * sh * 0.001425 * disc) < 1) {
+                rawBe = (totalCost + 1) / (sh * (1 - 0.003));
+            }
+
+            // 3. 對齊跳動單位 (Tick)
+            const tick = getTickSize(bp);
+            let finalBe = Math.ceil(rawBe / tick) * tick;
+            if (finalBe <= bp) finalBe += tick; // 至少要高一檔
+
+            const ticksNeeded = Math.round((finalBe - bp) / tick);
+
+            // 更新介面 - 保本
+            document.getElementById('res').classList.remove('hidden');
+            document.getElementById('bePrice').innerText = finalBe.toFixed(2) + " 元";
+            document.getElementById('bePercent').innerText = "+" + (((finalBe - bp) / bp) * 100).toFixed(2) + "%";
+            document.getElementById('tickInfo').innerText = `需上漲約 ${ticksNeeded} 個跳動點 (Tick)`;
+
+            // 4. 實際損益計算
+            if (sp > 0) {
+                let sFee = Math.floor(sp * sh * 0.001425 * disc);
+                if (sFee < 1) sFee = 1;
+                const tax = Math.floor(sp * sh * 0.003);
+                const netRevenue = (sp * sh) - sFee - tax;
+                const profit = netRevenue - totalCost;
+                const roi = (profit / totalCost) * 100;
+
+                const pElem = document.getElementById('netProfit');
+                pElem.innerText = (profit >= 0 ? "+" : "") + Math.round(profit).toLocaleString() + " 元";
+                pElem.style.color = profit >= 0 ? 'var(--red)' : 'var(--low-green)';
+                
+                document.getElementById('roi').innerText = `投資報酬率 ${roi.toFixed(2)}%`;
+                document.getElementById('roi').style.color = profit >= 0 ? 'var(--red)' : 'var(--low-green)';
+
+                document.getElementById('c1').innerText = Math.round(totalCost).toLocaleString() + " 元";
+                document.getElementById('c2').innerText = Math.round(netRevenue).toLocaleString() + " 元";
+                document.getElementById('c3').innerText = (bFee + sFee) + " 元";
+                document.getElementById('c4').innerText = tax.toLocaleString() + " 元";
+            } else {
+                document.getElementById('netProfit').innerText = "---";
+                document.getElementById('roi').innerText = "輸入賣出價查看明細";
+            }
+
+            window.scrollTo({ top: 500, behavior: 'smooth' });
         }
     </script>
 </body>
